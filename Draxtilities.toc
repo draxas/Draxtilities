@@ -1,0 +1,22 @@
+## Interface: 120100, 120105
+## Title: Draxtilities
+## Notes: Modular item safeguards for the original EllesmereUI.
+## Author: Gianmarco
+## Version: 0.1.1
+## X-Website: https://github.com/draxas/Draxtilities
+## X-License: MIT
+## Dependencies: EllesmereUI
+## OptionalDeps: EllesmereUIBags
+## SavedVariables: DraxtilitiesDB
+
+Core.lua
+Store.lua
+Confirm.lua
+PanelGuard.lua
+TypedDelete.lua
+Modules/Bags.lua
+Modules/Cursor.lua
+Modules/Merchant.lua
+Modules/Auctions.lua
+Modules/Scrapping.lua
+Options.lua

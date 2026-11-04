@@ -1,0 +1,31 @@
+# Generated release packages
+/.release/
+/dist/
+*.zip
+
+# Local editor and agent settings
+/.vscode/
+/.idea/
+/.codex/
+/.agents/
+*.code-workspace
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Temporary files and backups
+__pycache__/
+*.py[cod]
+*.bak
+*.tmp
+*.log
+*.swp
+*.swo
+*~
+
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini

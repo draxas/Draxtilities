@@ -1,0 +1,11 @@
+package-as: Draxtilities
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
+ignore:
+  - scripts
+  - RELEASING.md
+
+enable-nolib-creation: no
