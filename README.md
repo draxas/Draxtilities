@@ -1,207 +1,138 @@
 # Draxtilities
 
-Addon separato per World of Warcraft Retail Midnight 12.1+, con moduli
-indipendenti e integrazione tramite le API pubbliche dell'EllesmereUI originale.
-Richiede **EllesmereUI 9.7.3 o successiva**.
-Il suo ZIP contiene soltanto Draxtilities; EllesmereUI va installato separatamente.
+Draxtilities aggiunge i lucchetti agli oggetti nelle borse di EllesmereUI.
+Puoi proteggere una copia di un oggetto e lasciare libere le altre, anche se
+sono identiche. I moduli aggiungono conferme per vendita, eliminazione, aste
+e riciclo nelle operazioni elencate sotto.
 
-## Installazione con WoWUp
+## Requisiti
 
-Installa EllesmereUI 9.7.3 o successiva. In WoWUp seleziona il client Retail,
-apri **Get Addons → Install from URL** e incolla l'indirizzo del repository:
+- World of Warcraft Retail.
+- EllesmereUI 9.7.3 o successiva.
+- EllesmereUIBags per usare Bag Locks nelle borse.
+
+## Installazione
+
+### WoWUp
+
+Seleziona il client Retail e apri **Get Addons → Install from URL**, poi incolla:
 
 ```text
 https://github.com/draxas/Draxtilities
 ```
 
-L'installazione da URL diventa disponibile dopo la pubblicazione della prima
-[release con lo ZIP dell'addon](https://github.com/draxas/Draxtilities/releases).
-Le nuove release vengono rilevate da WoWUp e installate tramite **Update**
-o con gli aggiornamenti automatici abilitati. Usa l'URL del repository:
-un link diretto allo ZIP permette soltanto un'installazione singola.
+WoWUp usa le [release del progetto](https://github.com/draxas/Draxtilities/releases)
+per gli aggiornamenti. Puoi installare le nuove versioni con **Update** o
+abilitare gli aggiornamenti automatici.
 
-Per segnalare problemi usa le [issue GitHub](https://github.com/draxas/Draxtilities/issues).
+### Manuale
 
-## Installazione e primo avvio
+Scarica lo ZIP dell'addon dalla pagina
+[Releases](https://github.com/draxas/Draxtilities/releases) ed estrai la cartella
+`Draxtilities` in `_retail_/Interface/AddOns`.
+Il file TOC deve trovarsi in `AddOns/Draxtilities/Draxtilities.toc`.
+Usa il pacchetto dell'addon allegato alla release, anziché gli archivi **Source code**.
 
-1. Chiudi WoW e conserva un backup di `WTF` e delle cartelle degli addon.
-2. **Installa o aggiorna il pacchetto ufficiale completo di EllesmereUI tramite
-   WoWUp, alla versione 9.7.3 o successiva.** Non cancellare `WTF`:
-   contiene le impostazioni degli addon.
-   Se è installato il vecchio addon omonimo Draxtilities/Padlock, sposta la sua
-   intera cartella fuori da AddOns prima di estrarre questa versione: non unire
-   le due installazioni. Poi abilita il nuovo Draxtilities nella lista addon.
-3. Estrai lo ZIP di Draxtilities direttamente in `_retail_/Interface/AddOns`.
-   Devi ottenere `AddOns/Draxtilities/Draxtilities.toc`, accanto alle cartelle
-   ufficiali `EllesmereUI`, `EllesmereUIBags`, ecc.
-4. Avvia WoW e digita `/dt`. Nelle opzioni EUI appare una sezione distinta
-   **Draxtilities**, con le pagine **Modules**, **Items** e **Coverage**.
-5. Tutti i moduli partono **disabilitati**. Leggi Coverage e abilita quelli
-   desiderati. Per l'integrazione delle bag serve anche EllesmereUIBags attivo.
-6. Dopo aver abilitato Bag Locks, apri o riapri una volta le bag: l'API di EUI
-   fornisce a Draxtilities gli slot durante la loro visualizzazione.
+## Primo utilizzo
 
-Il rilevamento della vecchia protezione ancora attiva impedisce di abilitare
-una seconda protezione sopra il fork. Non installiamo né sovrascriviamo
-automaticamente file nella cartella del gioco.
+1. Digita `/dt` per aprire le opzioni di Draxtilities.
+2. Nella pagina **Modules**, abilita i moduli che vuoi usare. Al primo avvio sono tutti disabilitati.
+3. Per selezionare gli oggetti dalle borse, abilita **Bag Locks**,
+   chiudi e riapri le borse, poi digita `/dt lock`.
+4. Fai clic sinistro sugli oggetti da proteggere o sbloccare.
+   Premi Esc, fai clic destro su un oggetto o usa **Done** per uscire dalla selezione.
 
-## Moduli inclusi
+La protezione è disponibile per gli oggetti non stackabili. Un materiale
+stackabile non può essere protetto nemmeno quando ne possiedi un solo pezzo.
+Prima di usare `/dt lock`, esci dalle modalità Junk o Pin delle borse EUI.
+L'apertura del mercante e la chiusura delle borse terminano la selezione.
 
-| Modulo | Flussi coperti |
+Puoi applicare e rimuovere i lucchetti anche dalla pagina **Items**, che elenca
+le singole copie degli oggetti non stackabili nelle borse, comprese quelle che
+EUI raggruppa nella stessa icona. Per aggiungere un lucchetto deve essere attivo
+almeno un modulo. Con **Protected only** attivo vengono mostrati tutti i lucchetti
+salvati, anche quando la copia non è più nelle borse del personaggio.
+Usa **Refresh** per aggiornare l'elenco.
+
+## Moduli
+
+| Modulo | Operazioni coperte |
 |---|---|
-| Bag Locks | Badge per la copia rappresentata dallo slot EUI; selezione con `/dt lock`; conferma della vendita manuale con clic destro al mercante. |
-| Cursor Safeguards | Eliminazione trascinando una copia protetta nel mondo; vendita trascinandola sul mercante. Per gli oggetti che lo richiedono, prima compare DELETE nativo e poi la conferma EUI. |
-| Native Junk Sale | Pulsante Blizzard **Sell All Junk**. Non comprende il pulsante **Sell Junk** di EUI. |
-| Native Auctions | Pulsante **Post** della finestra nativa per oggetti non stackabili. Ricontrolla GUID, posizione, prezzo, durata e quantità. In presenza di copie protette corrispondenti si pubblica una copia alla volta. |
-| Native Scrapping | Pulsante nativo di riciclo, con verifica delle copie selezionate e pulizia dei lucchetti delle copie effettivamente consumate. |
+| Bag Locks | Lucchetti e selezione nelle borse EUI; conferma della vendita con clic destro al mercante. |
+| Cursor Safeguards | Conferma quando trascini un oggetto protetto nel mondo per eliminarlo o sul mercante per venderlo. Per gli oggetti che richiedono DELETE, la conferma EUI arriva dopo quella digitata. |
+| Native Junk Sale | Pulsante Blizzard **Sell All Junk**. |
+| Native Auctions | Pulsante **Post** della finestra aste Blizzard per oggetti non stackabili. Con copie protette corrispondenti nelle borse, si mette all'asta una copia alla volta. |
+| Native Scrapping | Pulsante di riciclo della finestra Blizzard. |
 
-Quando l'azione coinvolge copie protette, i tre pulsanti nativi richiedono
-questa sequenza:
+Per **Native Junk Sale**, **Native Auctions** e **Native Scrapping**, quando
+l'azione coinvolge copie protette:
 
-1. Premi il pulsante nativo per aprire la conferma EUI.
+1. Premi il pulsante dell'azione.
 2. Conferma il popup EUI.
-3. Premi **di nuovo lo stesso pulsante nativo** per eseguire l'azione.
+3. Premi di nuovo il pulsante dell'azione per completarla.
 
-Le due pressioni del pulsante sono separate dalla conferma del popup EUI.
-La conferma autorizza l'azione; la successiva pressione del pulsante nativo
-ricontrolla oggetto e contesto ed esegue una sola azione. Modifiche, annullamento,
-disattivazione o ingresso in combattimento richiedono una nuova conferma.
-Uscire dal combattimento non ripete alcuna azione.
-Le azioni che non coinvolgono copie protette procedono subito.
+Prima dell'esecuzione vengono ricontrollati gli oggetti selezionati e i dati
+dell'operazione, compresi prezzo, durata e quantità delle aste.
+Una selezione o un'operazione diversa richiede una nuova conferma.
+Le operazioni senza oggetti protetti procedono normalmente.
 
-## Comandi e gestione delle copie
+Le protezioni sono attive fuori dal combattimento. Quando entri in combattimento,
+conferme e autorizzazioni vengono annullate. Per riprendere un'operazione
+interrotta, avviala di nuovo dopo il combattimento.
+
+## Comandi
 
 | Comando | Azione |
 |---|---|
-| `/dt` oppure `/draxtilities` | Apre Modules nelle opzioni EUI. |
-| `/dt items` | Apre il registro e l'elenco delle copie. |
-| `/dt lock` | Attiva/disattiva la selezione nelle bag, se Bag Locks è abilitato. |
-| `/dt cursor` | Protegge/sblocca la copia tenuta sul cursore, con almeno un modulo abilitato. |
+| `/dt` o `/draxtilities` | Apre le opzioni. |
+| `/dt items` | Apre la pagina Items. |
+| `/dt lock` | Attiva o termina la selezione dei lucchetti nelle borse. Richiede Bag Locks. |
+| `/dt cursor` | Protegge o sblocca la copia sul cursore. Richiede almeno un modulo attivo. |
 
-Puoi mettere `/dt lock` in una macro e assegnarla a un tasto. In selezione,
-clic sinistro protegge/sblocca, clic destro o Esc termina la modalità.
-La piccola barra di Draxtilities è spostabile e contiene **Done** e
-**Manage every copy**. Il mercante e la chiusura delle bag terminano la selezione.
-Esci prima dalle modalità native Junk/Pin di EUI: Draxtilities non le modifica
-e non ne coordina gli stati interni.
+Puoi usare `/dt lock` in una macro e assegnarle un tasto.
 
-**Items → Protected only** sostituisce il vecchio filtro nella sidebar delle bag.
-Disattivando Protected only vengono mostrate le singole copie non stackabili
-nelle borse del personaggio, anche quando EUI le raggruppa in uno slot.
-Bag, slot e suffisso GUID permettono di distinguerle. Il pulsante Refresh
-aggiorna l'elenco; ogni azione ricontrolla la copia prima di modificarne il lock.
+## Limiti della protezione
 
-Sono ammessi oggetti con capacità massima di stack pari a 1. Un materiale
-stackabile presente in quantità 1 non è ammesso. La protezione è per GUID,
-non per itemID: due copie identiche possono avere stati diversi.
+I lucchetti coprono le operazioni indicate nella tabella dei moduli.
+Queste azioni restano escluse:
 
-## Integrazioni escluse e alternative
+- Vendite automatiche e pulsante **Sell Junk** di EllesmereUI.
+- Apertura automatica dei contenitori.
+- Disincantamento, altri incantesimi sugli oggetti ed EUI Quick Actions.
+- Posta, scambi, creazione degli oggetti e consegne delle quest.
+- Vendita, eliminazione, aste e riciclo avviati da macro o pulsanti di altri addon.
 
-Un lucchetto è un controllo dei percorsi elencati, **non un blocco del gioco
-contro qualsiasi distruzione**. I moduli possono essere disabilitati separatamente.
+Se usi i lucchetti, disabilita la vendita automatica in EUI e negli altri addon.
+Controlla la copia scelta prima di usare una delle azioni escluse.
+Bag Locks blocca il clic su un oggetto protetto quando stai scegliendo il
+bersaglio di un incantesimo. Per usarlo come bersaglio, rimuovi prima il lucchetto.
+Questo controllo non copre gli altri modi di avviare l'incantesimo.
 
-| Integrazione non portata | Alternativa |
-|---|---|
-| Pulsante aggiunto all'header EUI e riordino del relativo testo | Macro `/dt lock` e barra autonoma di Draxtilities. L'header originale resta gestito da EUI. |
-| Filtro Protected Items sotto Pinned Items | Pagina Items con Protected only. |
-| Cambiamento delle regole interne di raggruppamento | Pagina Items, che elenca ogni copia senza dipendere dal raggruppamento delle bag. I badge si riferiscono alla copia rappresentata dallo slot. |
-| Modifica della modalità Junk e selezione condivisa con il lucchetto | Junk originale resta intatto; la selezione Lock ha controlli propri. |
-| Vendita automatica EUI e relativo pulsante Sell Junk | **Disabilita le vendite automatiche** in EUI e negli altri addon. Usa le vendite manuali confermate, oppure il pulsante Blizzard con Native Junk Sale abilitato. Il pulsante EUI rimane fuori dalla protezione. |
-| Apertura automatica dei contenitori | Disabilita l'automazione e aprili manualmente dopo aver controllato la copia in Items. |
-| Disincantamento, spell sugli oggetti ed EUI Quick Actions | Sblocca esplicitamente la copia scelta in Items prima di procedere. Il nostro controllo sullo slot blocca il targeting diretto, ma gli altri ingressi alle spell non vengono intercettati. |
-| Vecchia categoria persistita “Draxtilities · Padlock” | Rimuovila dall'editor delle categorie di EUI. Draxtilities non modifica categorie o impostazioni di un altro addon. |
-| Posta, scambi, crafting, quest, macro e pulsanti di altri addon | Nessun blocco automatico; verifica e sblocca manualmente le copie interessate. |
+Quando EUI raggruppa più copie in una sola icona, il lucchetto si riferisce
+alla copia visualizzata. Usa **Items** per vedere e gestire le altre copie.
 
-Per una futura integrazione identica nelle bag servirebbero API ufficiali per
-pulsanti dell'header, filtri per GUID, selezione e controlli prima delle
-automazioni. Un'altra possibilità è aggiungere a Draxtilities una propria vendita
-sicura con una lista junk indipendente; questa versione non la implementa.
+## Salvataggio dei lucchetti
 
-## Dati e pulizia
-
-Impostazioni e lucchetti risiedono in **DraxtilitiesDB.companion**, separati
-da profili e import/export di EUI. Il file SavedVariables è
+Impostazioni e lucchetti vengono conservati tra sessioni e reload nel file
 `WTF/Account/<account>/SavedVariables/Draxtilities.lua`.
-Al primo avvio tutti i moduli sono disabilitati; agli avvii successivi vengono
-ripristinate le preferenze e i lucchetti già salvati da Draxtilities.
 
-Il registro può contenere copie di altri personaggi, in banca o equipaggiate:
-la sola assenza dalle bag non cancella un lock. La pulizia automatica riguarda
-solo le distruzioni osservate dopo le azioni di eliminazione/riciclo gestite
-da Draxtilities, dopo l'aggiornamento delle borse ricevuto dal server. Un lock
-non scompare se l'azione viene annullata, fallisce o l'oggetto viene spostato.
-Per azioni non osservate, addon disabilitato o reload durante un'azione, usa
-la rimozione manuale del record. Le copie vendute conservano il lock nel registro.
+I lucchetti restano nel registro anche quando la copia viene spostata,
+equipaggiata, venduta o non si trova nelle borse del personaggio.
+La rimozione automatica riguarda le eliminazioni e i ricicli osservati da
+Draxtilities. Per rimuovere un lucchetto che non serve più, usa
+**Remove protection** nella pagina Items.
 
-## Verifiche nel client
+## Segnalazioni e sviluppo
 
-L'assenza di taint, la correttezza visiva e la gestione nativa del mouse
-devono essere verificate nel client.
-I test automatici eseguono il Lua con API simulate e coprono le transizioni di
-stato; non sostituiscono queste verifiche nel gioco.
-Usa copie sacrificabili per le prove di distruzione.
+Per segnalare un problema, apri una
+[issue](https://github.com/draxas/Draxtilities/issues) indicando versione di
+Draxtilities ed EllesmereUI, modulo attivo e passaggi per riprodurlo.
 
-1. Con tutti i moduli OFF verifica Junk originale, header, ricerca e bag.
-2. Abilita Bag Locks, riapri le bag e prova `/dt lock` con Grid, List, Compact,
-   scrolling, scala UI e borsa reagenti separata. Prova due copie identiche e
-   uno stackabile presente in quantità 1.
-3. Controlla Items con entrambi i filtri e sposta un oggetto prima di premere
-   un pulsante dell'elenco: un'altra copia non deve ricevere quel lock.
-4. Prova vendita manuale e trascinamento sul mercante, annullando e confermando.
-5. Per un raro/epico protetto trascinato fuori dalle bag prova DELETE errato,
-   DELETE corretto con mouse e con Invio, quindi annulla/conferma il popup EUI.
-6. Per junk nativo, asta e riciclo con copie protette premi il pulsante,
-   conferma il popup EUI e premi ancora il pulsante nativo. Cambia selezione,
-   prezzo, quantità o copia dopo la conferma: serve una nuova autorizzazione.
-   Senza copie protette, l'azione deve procedere subito.
-7. Entra in combat durante un popup o dopo l'autorizzazione: non deve partire
-   alcuna azione all'uscita. Disabilita ogni modulo e verifica i clic normali.
-8. Fai `/reload`: le preferenze e i lock devono restare in Draxtilities e non
-   attivare modifiche al funzionamento originale di EUI.
-
-## Sviluppo e API usate
-
-Le istruzioni per gli agent e la mappa del sorgente sono in
+La mappa del codice e le convenzioni di sviluppo sono in
 [AGENTS.md](https://github.com/draxas/Draxtilities/blob/main/AGENTS.md).
-
-Il sorgente di Draxtilities è in questa cartella. Non accede a `_ModuleNS`, agli
-internals delle bag o ai popup del fork e non sostituisce funzioni EUI.
-L'unica lettura del vecchio servizio riguarda il rilevamento di una protezione
-integrata ancora in esecuzione, per impedirne la duplicazione.
-
-- Plugin API ufficiale, documentata in `PLUGINS_API.md` nella cartella o nel repository di EllesmereUI: RegisterPlugin,
-  OpenPlugin, Widgets, ricerca e refresh della pagina del plugin.
-- Skinning API, documentata in `SKINNING_API.md` di EllesmereUI: soltanto frame creati da Draxtilities.
-- `EUI_Bags.RegisterItemOverlayIcon` / `UnregisterItemOverlayIcon`: API pubblica
-  documentata in `EUI_Bags_Slots.lua` di EllesmereUIBags; nessuna modifica ai pulsanti Blizzard.
-- API Blizzard degli oggetti e definizioni native di cancellazione, consultate
-  nel [sorgente UI Blizzard](https://github.com/Gethe/wow-ui-source).
-
-Il repository contiene il solo sorgente di Draxtilities. Il workflow GitHub
-genera lo ZIP installabile e i metadati per WoWUp a ogni push di un tag di versione.
-Per i comandi e il flusso di pubblicazione vedi
-[RELEASING.md](https://github.com/draxas/Draxtilities/blob/main/RELEASING.md).
-
-Per controllare manifest e versione prima della pubblicazione:
-
-```text
-python scripts/validate_release.py
-```
-
-Per eseguire le regressioni Lua 5.1, crea un ambiente di sviluppo separato
-(esempio PowerShell su Windows):
-
-```powershell
-python -m venv .venv
-.venv\Scripts\python -m pip install -r requirements-dev.txt
-.venv\Scripts\python -m unittest discover -s tests -v
-```
-
-Su Linux o macOS l'interprete dell'ambiente è `.venv/bin/python`.
-Le dipendenze di test e la cartella `tests` restano fuori dallo ZIP dell'addon.
+[RELEASING.md](https://github.com/draxas/Draxtilities/blob/main/RELEASING.md)
+contiene i comandi di verifica, le prove nel client e la procedura di pubblicazione.
 
 ## Licenza
 
-Il codice originale di Draxtilities è distribuito con [licenza MIT](LICENSE).
-World of Warcraft ed EllesmereUI restano dei rispettivi titolari; questo
-repository non ne include il codice né gli asset.
+[MIT](LICENSE).

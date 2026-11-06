@@ -1,6 +1,6 @@
 ## Interface: 120100, 120105
 ## Title: Draxtilities
-## Notes: Modular item safeguards for the original EllesmereUI.
+## Notes: Item locks and confirmations for EllesmereUI.
 ## Author: Gianmarco
 ## Version: 0.1.1
 ## X-Website: https://github.com/draxas/Draxtilities

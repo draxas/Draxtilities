@@ -1,46 +1,67 @@
-# Pubblicare Draxtilities
+# Test e pubblicazione
 
-Il repository sorgente è <https://github.com/draxas/Draxtilities>.
-Per i controlli locali serve Python 3.9 o successivo.
-Il workflow `.github/workflows/release.yml` controlla il progetto a ogni push su
-`main`, nelle pull request e quando viene avviato manualmente da Actions.
-La validazione comprende i test Lua 5.1 con API simulate, il manifest e una
-prova di packaging senza upload.
-Un push di un tag `v*` avvia anche il packaging e la pubblicazione della release.
+## Controlli locali
 
-## Prima pubblicazione
+Il controllo del manifest richiede Python 3.9 o successivo:
 
-La versione iniziale nel TOC è `0.1.1`. Dalla cartella del repository:
-
-```powershell
-python scripts/validate_release.py --tag v0.1.1
-git add .
-git diff --cached --stat
-git commit -m "Add modular item safeguards with EllesmereUI integration"
-git push -u origin main
-git tag -a v0.1.1 -m "Draxtilities 0.1.1"
-git push origin v0.1.1
+```text
+python scripts/validate_release.py
+git diff --check
 ```
 
-Il push su `main` pubblica il sorgente. Il push del tag pubblica anche la
-versione installabile: apri **Actions → Validate and release** per seguirne
-l'esito, poi controlla la pagina [Releases](https://github.com/draxas/Draxtilities/releases).
+Per i test Lua 5.1, crea un ambiente virtuale e installa le dipendenze di sviluppo.
+Su Windows, da PowerShell:
 
-La release deve contenere:
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
 
-- `Draxtilities-v0.1.1.zip`, con una sola cartella principale `Draxtilities/`.
-- `release.json`, generato dal packager con i metadati per i gestori di addon.
+Su Linux o macOS, usa `./.venv/bin/python` al posto di `.\.venv\Scripts\python.exe`.
+Dopo l'installazione delle dipendenze puoi rilanciare direttamente il comando dei test.
 
-GitHub aggiunge anche gli archivi automatici **Source code**: per installare
-l'addon usa lo ZIP generato dal workflow.
+I test usano API simulate. Verificano la logica dei lucchetti e delle conferme,
+ma non il comportamento dei frame protetti, il taint o i clic nel client.
 
-## Aggiornamenti successivi
+## Verifiche nel client
 
-1. Modifica il codice e prova le funzionalità interessate nel client WoW.
-   Esegui anche i test automatici descritti nel README.
-2. Aggiorna `## Version` in `Draxtilities.toc`, per esempio a `0.1.2`.
-3. Aggiungi in cima a `CHANGELOG.md` una sezione `## 0.1.2` con le novità.
-4. Verifica, committa e pubblica:
+Per le prove di vendita, eliminazione e riciclo usa oggetti che puoi perdere.
+
+1. Con tutti i moduli disabilitati, controlla il normale funzionamento delle
+   borse EUI: ricerca, modalità Junk, layout e scrolling.
+2. Abilita Bag Locks, riapri le borse e prova `/dt lock` nei layout Grid, List e
+   Compact, con scrolling, scala UI diversa e borsa reagenti separata.
+   Verifica due copie identiche e il rifiuto di uno stackabile in quantità 1.
+3. In Items, prova entrambi gli stati di Protected only. Sposta una copia
+   prima di usare il pulsante della sua riga: il lock non deve passare a un'altra copia.
+4. Prova la vendita con clic destro e trascinando sul mercante. Annulla e
+   conferma entrambe le operazioni; una vendita deve conservare il lock nel registro.
+5. Trascina fuori dalle borse un oggetto raro o epico protetto. Prova DELETE
+   errato e corretto, sia con il mouse sia con Invio, poi annulla o conferma il popup EUI.
+6. Per Sell All Junk, Post e riciclo, verifica la sequenza pulsante → conferma
+   EUI → pulsante. Cambia copia, selezione, prezzo o quantità dopo la conferma:
+   l'operazione modificata deve richiederne un'altra.
+7. Entra in combattimento durante una conferma o dopo averla accettata.
+   Controlla che le protezioni vengano sospese e che all'uscita non parta alcuna
+   azione. Fuori dal combattimento, disabilita i moduli e verifica che i pulsanti
+   nativi tornino al normale funzionamento.
+8. Annulla un'eliminazione o interrompi un riciclo, poi vendi la stessa copia:
+   il suo lock deve rimanere nel registro. Controlla invece la rimozione del
+   record dopo un'eliminazione o un riciclo completati.
+9. Esegui `/reload` e controlla la persistenza dei lucchetti e dei moduli abilitati.
+
+Riporta nel riepilogo della modifica quali prove sono state eseguite.
+
+## Pubblicare una versione
+
+1. Aggiorna `## Version` in `Draxtilities.toc`.
+2. Aggiungi le novità in cima a `CHANGELOG.md`, sotto un'intestazione con la stessa versione.
+3. Esegui i controlli locali e le prove nel client pertinenti alla modifica.
+4. Crea un commit che descriva le modifiche e pubblicalo su `main`.
+5. Crea e pubblica un tag annotato `v<versione>`.
+
+Per esempio, dopo aver aggiornato TOC e changelog alla versione `0.1.2`:
 
 ```powershell
 python scripts/validate_release.py --tag v0.1.2
@@ -51,58 +72,45 @@ git tag -a v0.1.2 -m "Draxtilities 0.1.2"
 git push origin v0.1.2
 ```
 
-Il tag deve corrispondere esattamente a `v` più la versione nel TOC.
-Per il commit scrivi un messaggio in inglese che descriva le modifiche implementate.
-Per una beta usa, per esempio, `0.1.2-beta.1` nel TOC e `v0.1.2-beta.1` come tag.
-Il packager riconosce `alpha` e `beta` e pubblica queste versioni come prerelease.
-Gli utenti del canale stabile ricevono le release stabili.
+Sono accettate versioni `X.Y.Z`, `X.Y.Z-alpha.N` e `X.Y.Z-beta.N`, con il contatore
+`N` a partire da 1. Per esempio, una beta usa `0.1.2-beta.1` nel TOC e
+`v0.1.2-beta.1` come tag e viene pubblicata come prerelease.
+Per correggere una versione già distribuita, pubblica una nuova versione con un nuovo tag.
 
-I normali commit su `main` non distribuiscono aggiornamenti agli utenti.
-Per correggere una release già pubblicata usa una nuova versione e un nuovo tag.
+## GitHub Actions e pacchetto
 
-## WoWUp: installazione e aggiornamenti
+Il workflow [Validate and release](.github/workflows/release.yml) esegue test,
+controllo del manifest e packaging senza upload sui push a `main`, nelle pull
+request e all'avvio manuale. Sui push dei tag `v*`, dopo questi controlli,
+crea anche una release GitHub e allega:
 
-In **Get Addons → Install from URL**, seleziona il client Retail e incolla:
+- `Draxtilities-<tag>.zip`, con `Draxtilities/Draxtilities.toc` e i file dell'addon.
+- `release.json`, con i metadati usati dai gestori di addon.
+
+Il nome della cartella e le esclusioni sono definiti in `.pkgmeta`.
+Test, dipendenze di sviluppo e istruzioni per i manutentori non vanno nello ZIP.
+
+Il job di pubblicazione usa il `GITHUB_TOKEN` fornito da GitHub con
+`contents: write`. Il repository deve consentire GitHub Actions e questi permessi.
+Segui l'esecuzione nella scheda **Actions** e controlla gli allegati nella pagina
+[Releases](https://github.com/draxas/Draxtilities/releases).
+
+## Aggiornamenti tramite WoWUp
+
+L'URL da condividere è quello del repository:
 
 ```text
 https://github.com/draxas/Draxtilities
 ```
 
-È necessaria almeno una release pubblicata con lo ZIP installabile allegato.
-Gli utenti continuano a usare lo stesso URL per tutte le versioni.
-WoWUp controlla le release GitHub e propone quelle compatibili con il client
-e il canale selezionati; le installa tramite **Update** o con l'aggiornamento
-automatico abilitato. La frequenza dei controlli dipende dalle impostazioni di WoWUp.
+WoWUp distribuisce le release con lo ZIP installabile allegato. I normali push
+su `main` non aggiornano l'addon agli utenti. Un collegamento diretto allo ZIP
+serve per un'installazione singola, senza controlli sugli aggiornamenti.
 
-Un URL diretto allo ZIP permette un'installazione singola: WoWUp lo contrassegna
-come ignorato perché non ha una sorgente da interrogare per gli aggiornamenti.
-EllesmereUI 9.7.3 o successiva deve essere installato separatamente.
-
-Durante lo sviluppo tieni il checkout Git separato dalla copia aggiornata con
-WoWUp, per evitare che gli aggiornamenti sovrascrivano i file su cui lavori.
-
-## Packaging e permessi GitHub
-
-Usiamo [BigWigs Packager](https://github.com/BigWigsMods/packager) con
-`.pkgmeta` per mantenere il nome della cartella `Draxtilities`, includere il
-changelog ed escludere gli strumenti di sviluppo dal pacchetto.
-Il workflow pubblica soltanto su GitHub; non richiede account CurseForge o Wago.
-
-Per creare release usa il `GITHUB_TOKEN` fornito da GitHub, con
-`permissions: contents: write` nel solo job di pubblicazione. Non devi creare
-un token personale. Il repository deve consentire l'esecuzione di GitHub Actions.
-Se una policy dell'account limita i permessi del token, controlla
-**Settings → Actions → General**.
-
-## Licenza
-
-Il codice originale di Draxtilities è distribuito con [licenza MIT](LICENSE).
-Il pacchetto non include EllesmereUI o file di World of Warcraft.
-La licenza riguarda questo progetto; l'uso e la distribuzione degli addon
-restano soggetti alla [policy Blizzard](https://eu.forums.blizzard.com/en/wow/t/wow-user-interface-add-on-development-policy/1642).
+Durante lo sviluppo, tieni il checkout Git separato dalla copia gestita da WoWUp.
 
 ## Riferimenti
 
 - [WoWUp: installazione da URL](https://wowup.io/guide/get-addons/overview)
-- [BigWigs Packager: workflow GitHub Actions](https://github.com/BigWigsMods/packager/wiki/GitHub-Actions-workflow)
-- [BigWigs Packager: configurazione .pkgmeta](https://github.com/BigWigsMods/packager/wiki/Preparing-the-PackageMeta-File)
+- [BigWigs Packager](https://github.com/BigWigsMods/packager)
+- [Configurazione .pkgmeta](https://github.com/BigWigsMods/packager/wiki/Preparing-the-PackageMeta-File)

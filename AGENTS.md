@@ -2,16 +2,14 @@
 
 ## Contesto e documentazione
 
-Draxtilities è un addon Lua per World of Warcraft Retail 12.1+, dipendente da
-EllesmereUI originale 9.7.3 o successiva. EllesmereUIBags è opzionale ed è
-necessario per Bag Locks. Non ci sono dipendenze Python per l'esecuzione in WoW,
-compilazione del Lua o librerie EUI incorporate nel repository.
+Draxtilities aggiunge la protezione degli oggetti a EllesmereUI su WoW Retail.
+Richiede EllesmereUI 9.7.3 o successiva; Bag Locks richiede anche EllesmereUIBags.
+WoW carica i file Lua nell'ordine del TOC. Python serve per i controlli del
+repository e per i test.
 
-Il contesto necessario deve restare nei file del progetto, senza dipendere
-dalla cronologia di una chat o da percorsi assoluti del computer dello sviluppatore.
-Consulta [README.md](README.md) per comportamento, copertura e prove nel client;
-[RELEASING.md](RELEASING.md) per packaging e pubblicazione. Leggi i sorgenti
-interessati dalla richiesta prima di modificarli.
+[README.md](README.md) descrive uso e limiti dell'addon.
+[RELEASING.md](RELEASING.md) contiene controlli, prove nel client e pubblicazione.
+Documenta nel repository le scelte necessarie a chi modifica il codice.
 
 ## Mappa del sorgente
 
@@ -32,28 +30,31 @@ interessati dalla richiesta prima di modificarli.
 | `scripts/validate_release.py` | Controlli di manifest, percorsi, versione e file necessari alla release. |
 | `tests/test_runtime.py`, `tests/wow_mock.lua` | Regressioni Lua 5.1 con API simulate; non emulano taint o esecuzione protetta. |
 
-I file Lua condividono il namespace ricevuto tramite `local _, ns = ...`.
+Il secondo argomento di `...` è il namespace condiviso `ns`.
 I moduli si registrano con `ns.Register(key, spec)`; `Start()` restituisce un
 controller oppure `nil, motivo`. Il controller espone `Stop()` e, se necessari,
 `Refresh`, `Event`, `Cancel` e `Suspend`. `Core.lua` gestisce `running` e gli eventi.
 Mantieni l'ordine del TOC coerente quando aggiungi file o dipendenze tra file.
 
-## Invarianti delle protezioni
+## Regole delle protezioni
 
 - I moduli sono indipendenti e disabilitati al primo avvio; le preferenze salvate
   vengono ripristinate agli avvii successivi.
 - Le impostazioni rimangono in `DraxtilitiesDB.companion`. Preserva i dati esistenti.
-- Un lock identifica una copia tramite GUID, non un itemID. Sono ammessi solo
-  oggetti con capacità massima di stack pari a 1, anche quando la quantità è 1.
-- Prima di modificare un lock o compiere un'azione distruttiva, ricontrolla GUID,
-  posizione e contesto. Se i dati necessari non sono disponibili, interrompi
-  l'azione e permetti di riprovare dopo il caricamento dei dati.
-- Combattimento, annullamento e disattivazione invalidano conferme e permessi.
+- Un lock identifica una copia tramite GUID; un itemID da solo non basta.
+  Proteggi solo oggetti con capacità massima di stack pari a 1: la quantità
+  attuale nello slot non determina l'idoneità.
+- Prima di agire su una copia nelle borse, ricontrolla GUID, posizione e contesto.
+  Se i dati necessari non sono disponibili, interrompi l'azione e permetti di
+  riprovare dopo il caricamento dei dati. La rimozione manuale di un lock dal
+  registro deve restare possibile anche per copie assenti dalle borse.
+- In combattimento le protezioni sono sospese. Combattimento, annullamento e
+  disattivazione invalidano conferme e permessi.
   Nessuna azione distruttiva deve essere accodata per l'uscita dal combattimento.
 - Per i tre moduli dei pulsanti nativi, la conferma concede un permesso monouso:
   l'azione viene eseguita alla successiva pressione del pulsante nativo, dopo
   una nuova verifica. Senza copie protette l'azione procede direttamente.
-- L'assenza di una copia dalle bag non giustifica la cancellazione del lock:
+- Non cancellare automaticamente un lock perché la copia non è nelle borse:
   potrebbe essere equipaggiata, in banca, sul cursore o su un altro personaggio.
   La pulizia automatica riguarda solo eliminazioni e ricicli osservati e viene
   verificata dopo `BAG_UPDATE_DELAYED`; una copia venduta conserva il lock.
@@ -103,7 +104,7 @@ git diff --check
 ```
 
 Per le regressioni funzionali, installa `requirements-dev.txt` in un ambiente
-virtuale come descritto nel README, quindi esegui con quell'interprete:
+virtuale come descritto in RELEASING.md, quindi esegui con quell'interprete:
 
 ```text
 python -m unittest discover -s tests -v
@@ -115,7 +116,7 @@ Per preparare una release usa anche `python scripts/validate_release.py --tag vX
 sostituendo il tag con la versione desiderata. Lo script controlla metadati e
 file; non esegue Lua, non simula WoW e non dimostra assenza di taint.
 Per modifiche funzionali scegli le prove pertinenti dalla sezione
-"Verifiche nel client" del README. Riporta quali controlli hai eseguito e quali
+"Verifiche nel client" di RELEASING.md. Riporta quali controlli hai eseguito e quali
 prove nel client restano da fare, senza dichiarare esiti non osservati.
 
 ## Git e distribuzione
