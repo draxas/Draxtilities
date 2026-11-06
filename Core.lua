@@ -40,6 +40,7 @@ end
 
 function ns.Cancel()
     ns.CancelRequest()
+    ns.CancelRemovals()
     for _, controller in pairs(ns.active) do
         if controller.Cancel then controller.Cancel() end
     end
@@ -82,7 +83,16 @@ function ns.SetEnabled(key, enabled)
     return true
 end
 
-events:SetScript("OnEvent", function(_, event, arg, success)
+local refreshQueued
+local deferredRefreshEvents = {
+    MERCHANT_SHOW = true, MERCHANT_CLOSED = true,
+    AUCTION_HOUSE_SHOW = true, AUCTION_HOUSE_CLOSED = true,
+    PLAYER_INTERACTION_MANAGER_FRAME_SHOW = true, PLAYER_INTERACTION_MANAGER_FRAME_HIDE = true,
+    ADDON_LOADED = true,
+}
+
+events:SetScript("OnEvent", function(_, event, ...)
+    local arg, success = ...
     if event == "PLAYER_REGEN_DISABLED" then
         ns.Cancel()
         for _, controller in pairs(ns.active) do
@@ -101,9 +111,17 @@ events:SetScript("OnEvent", function(_, event, arg, success)
     for _, key in ipairs(ns.order) do
         local controller = ns.active[key]
         if controller then
-            if controller.Event then controller.Event(event, arg) end
+            if controller.Event then controller.Event(event, ...) end
             if controller.Refresh then controller.Refresh() end
         end
+    end
+    -- Native panels may finish showing after our event handler has run.
+    if deferredRefreshEvents[event] and not refreshQueued then
+        refreshQueued = true
+        C_Timer.After(0, function()
+            refreshQueued = nil
+            ns.Refresh()
+        end)
     end
 end)
 

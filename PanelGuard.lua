@@ -3,19 +3,22 @@ local _, ns = ...
 
 function ns.CreatePanelGuard(spec)
     local G = {}
-    local button, permission, boundTarget
+    local button, permission, boundTarget, removalTicket
     local function Disarm()
         if button and not InCombatLockdown() then
             button:SetAttribute("type", nil)
             button:SetAttribute("clickbutton", nil)
         end
     end
-    function G.Cancel() permission = nil end
+    function G.Cancel()
+        permission = nil
+        if removalTicket then ns.CancelRemovals(removalTicket); removalTicket = nil end
+    end
     function G.Refresh()
         if InCombatLockdown() then return end
         local target = spec.Target()
         if not target or not target:IsVisible() then
-            permission = nil
+            G.Cancel()
             if button then button:Hide(); UnregisterStateDriver(button, "visibility"); Disarm() end
             return
         end
@@ -63,7 +66,10 @@ function ns.CreatePanelGuard(spec)
                     return
                 end
                 permission = nil
-                if spec.track then ns.WatchRemoval(items) end
+                if spec.track then
+                    if removalTicket then ns.CancelRemovals(removalTicket) end
+                    removalTicket = ns.WatchRemoval(items)
+                end
                 button:SetAttribute("type", "click")
                 button:SetAttribute("clickbutton", live)
             end)
@@ -72,7 +78,7 @@ function ns.CreatePanelGuard(spec)
             end)
             G.button = button
         end
-        if boundTarget ~= target then permission = nil end
+        if boundTarget ~= target then G.Cancel() end
         boundTarget = target
         button:ClearAllPoints()
         button:SetScale(target:GetEffectiveScale() / UIParent:GetEffectiveScale())
@@ -83,9 +89,9 @@ function ns.CreatePanelGuard(spec)
         RegisterStateDriver(button, "visibility", "[combat] hide;")
         button:Show()
     end
-    function G.Suspend() permission = nil end
+    function G.Suspend() G.Cancel() end
     function G.Stop()
-        permission = nil
+        G.Cancel()
         if button then
             button:Hide()
             UnregisterStateDriver(button, "visibility")

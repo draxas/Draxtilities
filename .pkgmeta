@@ -5,7 +5,10 @@ manual-changelog:
   markup-type: markdown
 
 ignore:
+  - AGENTS.md
   - scripts
+  - tests
+  - requirements-dev.txt
   - RELEASING.md
 
 enable-nolib-creation: no

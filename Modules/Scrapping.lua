@@ -5,7 +5,8 @@ ns.Register("scrapping", {
     title = "Native Scrapping",
     description = "Confirms the native Scrap button, rechecks every selected copy and removes locks only after successful removal.",
     events = { "SCRAPPING_MACHINE_PENDING_ITEM_CHANGED", "PLAYER_INTERACTION_MANAGER_FRAME_SHOW",
-        "PLAYER_INTERACTION_MANAGER_FRAME_HIDE", "ADDON_LOADED" },
+        "PLAYER_INTERACTION_MANAGER_FRAME_HIDE", "ADDON_LOADED",
+        "UNIT_SPELLCAST_INTERRUPTED", "UNIT_SPELLCAST_FAILED" },
     Start = function()
         if not controller then
             controller = ns.CreatePanelGuard({
@@ -27,6 +28,12 @@ ns.Register("scrapping", {
                     return items, ns.Signature(items)
                 end,
             })
+            function controller.Event(event, unit, _, spellID)
+                if (event == "UNIT_SPELLCAST_INTERRUPTED" or event == "UNIT_SPELLCAST_FAILED")
+                    and unit == "player" and spellID == C_ScrappingMachineUI.GetScrapSpellID() then
+                    controller.Cancel()
+                end
+            end
         end
         return controller
     end,

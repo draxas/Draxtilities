@@ -46,9 +46,10 @@ ns.Register("cursor", {
                 end
                 local quest = C_Container.GetContainerItemQuestInfo(item.bag, item.slot)
                 nativeDeleteGUID = item.guid
+                ns.WatchRemoval({ item })
                 GameEvent.HandleDeleteItemConfirm(nil, "DELETE_ITEM_CONFIRM", name, quality, nil,
                     quest and (quest.isQuestItem or quest.questID) and 1 or 0)
-            end, not sell)
+            end)
         end
         local function MakeLayer(sell)
             local f = CreateFrame("Button", nil, UIParent)
@@ -69,7 +70,15 @@ ns.Register("cursor", {
             if InCombatLockdown() then return end
             typed.CursorChanged()
             local item = Cursor()
-            if nativeDeleteGUID and (not item or item.guid ~= nativeDeleteGUID) then nativeDeleteGUID = nil end
+            if nativeDeleteGUID and (not item or item.guid ~= nativeDeleteGUID) then
+                local location = C_Item.GetItemLocation(nativeDeleteGUID)
+                if location and location:HasAnyLocation() and C_Item.DoesItemExist(location) then
+                    -- A cancelled native dialog returns the copy to its bag.
+                    -- Retain the lock whenever removal has not been observed.
+                    ns.CancelRemoval(nativeDeleteGUID)
+                end
+                nativeDeleteGUID = nil
+            end
             C.world:SetShown(item ~= nil)
             local merchant = item and MerchantFrame and MerchantFrame:IsVisible() and MerchantFrame.selectedTab == 1
             C.merchant:SetShown(merchant and true or false)

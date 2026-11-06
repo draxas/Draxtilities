@@ -1,0 +1,2 @@
+# Lua 5.1 runtime used only by the regression tests.
+lupa==2.8

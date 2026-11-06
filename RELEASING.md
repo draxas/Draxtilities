@@ -4,6 +4,8 @@ Il repository sorgente è <https://github.com/draxas/Draxtilities>.
 Per i controlli locali serve Python 3.9 o successivo.
 Il workflow `.github/workflows/release.yml` controlla il progetto a ogni push su
 `main`, nelle pull request e quando viene avviato manualmente da Actions.
+La validazione comprende i test Lua 5.1 con API simulate, il manifest e una
+prova di packaging senza upload.
 Un push di un tag `v*` avvia anche il packaging e la pubblicazione della release.
 
 ## Prima pubblicazione
@@ -14,7 +16,7 @@ La versione iniziale nel TOC è `0.1.1`. Dalla cartella del repository:
 python scripts/validate_release.py --tag v0.1.1
 git add .
 git diff --cached --stat
-git commit -m "Prepare Draxtilities 0.1.1 for public release"
+git commit -m "Add modular item safeguards with EllesmereUI integration"
 git push -u origin main
 git tag -a v0.1.1 -m "Draxtilities 0.1.1"
 git push origin v0.1.1
@@ -35,6 +37,7 @@ l'addon usa lo ZIP generato dal workflow.
 ## Aggiornamenti successivi
 
 1. Modifica il codice e prova le funzionalità interessate nel client WoW.
+   Esegui anche i test automatici descritti nel README.
 2. Aggiorna `## Version` in `Draxtilities.toc`, per esempio a `0.1.2`.
 3. Aggiungi in cima a `CHANGELOG.md` una sezione `## 0.1.2` con le novità.
 4. Verifica, committa e pubblica:
@@ -42,13 +45,14 @@ l'addon usa lo ZIP generato dal workflow.
 ```powershell
 python scripts/validate_release.py --tag v0.1.2
 git add .
-git commit -m "Release Draxtilities 0.1.2"
+git commit
 git push origin main
 git tag -a v0.1.2 -m "Draxtilities 0.1.2"
 git push origin v0.1.2
 ```
 
 Il tag deve corrispondere esattamente a `v` più la versione nel TOC.
+Per il commit scrivi un messaggio in inglese che descriva le modifiche implementate.
 Per una beta usa, per esempio, `0.1.2-beta.1` nel TOC e `v0.1.2-beta.1` come tag.
 Il packager riconosce `alpha` e `beta` e pubblica queste versioni come prerelease.
 Gli utenti del canale stabile ricevono le release stabili.

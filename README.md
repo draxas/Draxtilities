@@ -137,6 +137,8 @@ la rimozione manuale del record. Le copie vendute conservano il lock nel registr
 
 L'assenza di taint, la correttezza visiva e la gestione nativa del mouse
 devono essere verificate nel client.
+I test automatici eseguono il Lua con API simulate e coprono le transizioni di
+stato; non sostituiscono queste verifiche nel gioco.
 Usa copie sacrificabili per le prove di distruzione.
 
 1. Con tutti i moduli OFF verifica Junk originale, header, ricerca e bag.
@@ -158,6 +160,9 @@ Usa copie sacrificabili per le prove di distruzione.
    attivare modifiche al funzionamento originale di EUI.
 
 ## Sviluppo e API usate
+
+Le istruzioni per gli agent e la mappa del sorgente sono in
+[AGENTS.md](https://github.com/draxas/Draxtilities/blob/main/AGENTS.md).
 
 Il sorgente di Draxtilities è in questa cartella. Non accede a `_ModuleNS`, agli
 internals delle bag o ai popup del fork e non sostituisce funzioni EUI.
@@ -182,6 +187,18 @@ Per controllare manifest e versione prima della pubblicazione:
 ```text
 python scripts/validate_release.py
 ```
+
+Per eseguire le regressioni Lua 5.1, crea un ambiente di sviluppo separato
+(esempio PowerShell su Windows):
+
+```powershell
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-dev.txt
+.venv\Scripts\python -m unittest discover -s tests -v
+```
+
+Su Linux o macOS l'interprete dell'ambiente è `.venv/bin/python`.
+Le dipendenze di test e la cartella `tests` restano fuori dallo ZIP dell'addon.
 
 ## Licenza
 

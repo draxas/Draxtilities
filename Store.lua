@@ -80,11 +80,26 @@ function ns.Inventory()
 end
 
 function ns.WatchRemoval(items)
-    for _, item in ipairs(items) do if ns.IsLocked(item) then removals[item.guid] = item end end
+    local ticket = {}
+    for _, item in ipairs(items) do
+        if ns.IsLocked(item) then removals[item.guid] = { item = item, ticket = ticket } end
+    end
+    return ticket
+end
+
+function ns.CancelRemovals(ticket)
+    for guid, watch in pairs(removals) do
+        if not ticket or watch.ticket == ticket then removals[guid] = nil end
+    end
+end
+
+function ns.CancelRemoval(guid)
+    removals[guid] = nil
 end
 
 function ns.ReconcileRemovals()
-    for guid, original in pairs(removals) do
+    for guid, watch in pairs(removals) do
+        local original = watch.item
         local location = C_Item.GetItemLocation(guid)
         if location and location:HasAnyLocation() and C_Item.DoesItemExist(location) then
             local now = ns.CaptureLocation(location)

@@ -65,6 +65,11 @@ ns.Register("bags", {
             f:SetScript("OnReceiveDrag", function(self) Click(self, "LeftButton") end)
             f:SetScript("OnEnter", Hover)
             f:SetScript("OnLeave", HideHover)
+            f:SetScript("OnUpdate", function(self)
+                -- This control is a sibling of the secure slot, so it must
+                -- follow slot hiding caused by EUI filtering or pooling.
+                if self.target and not self.target:IsVisible() then self:Hide() end
+            end)
             f.fill = f:CreateTexture(nil, "OVERLAY", nil, 5)
             f.fill:SetAllPoints()
             f.fill:SetColorTexture(1, 1, 1, 0.4)

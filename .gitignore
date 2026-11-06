@@ -1,6 +1,7 @@
 # Generated release packages
 /.release/
 /dist/
+/.venv/
 *.zip
 
 # Local editor and agent settings
