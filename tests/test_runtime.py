@@ -635,52 +635,99 @@ class RuntimeTests(unittest.TestCase):
             assert(box.selectionStart == box.selectionEnd)
         """)
 
-    def test_bag_button_selection_movement_visibility_and_disable(self):
+    def test_bag_footer_button_follows_parent_visibility_and_module_lifecycle(self):
         self.load("Modules/Bags.lua")
         self.run_lua("""
-            test.put(0, 1, 'Item-A')
-            ns.db.bagButtonPosition = { point = 'TOP', relativePoint = 'TOP', x = 12, y = -90 }
+            local oldPosition = { point = 'TOP', relativePoint = 'TOP', x = 12, y = -90 }
+            ns.db.bagButtonPosition = oldPosition
             assert(ns.SetEnabled('bags', true))
-            local parent = CreateFrame('Frame')
-            parent:SetID(0)
-            local target = CreateFrame('Button', nil, parent)
-            target:SetID(1)
-            test.paint(target, { bag = 0, slot = 1, info = { itemID = 100 } })
             local bags = ns.active.bags
             local button = bags.launcher
-            assert(button and button:IsShown())
-            local point, _, _, x, y = button:GetPoint()
-            assert(point == 'TOP' and x == 12 and y == -90)
+            assert(button and button:GetParent() == EUI_MainBagFrame and not button:IsVisible())
+            assert(not button.scripts.OnDragStart and not button.scripts.OnDragStop)
+            assert(not EUI_MainBagFrame.scripts.OnShow and not EUI_MainBagFrame.scripts.OnHide)
+            EUI_MainBagFrame:Show()
+            button.scripts.OnUpdate(button, 0.3)
+            assert(button:IsVisible() and button.fits and button.mouseEnabled, 'empty bags have no usable footer button')
+            local point, relative, relativePoint, x, y = button:GetPoint()
+            assert(point == 'BOTTOMLEFT' and relative == EUI_MainBagFrame and relativePoint == 'BOTTOMLEFT')
+            assert(x >= 6 and y == 4)
             button.scripts.OnClick(button, 'LeftButton')
-            assert(bags.mode and button.text == 'Finish selection')
+            assert(bags.mode and button.selection:IsShown())
             button.scripts.OnClick(button, 'LeftButton')
-            assert(not bags.mode)
-            button.scripts.OnMouseDown(button)
-            button.scripts.OnDragStart(button)
-            button:SetPoint('CENTER', UIParent, 'CENTER', 80, 120)
-            button.scripts.OnDragStop(button)
-            button.scripts.OnClick(button, 'LeftButton')
-            assert(not bags.mode, 'dragging the button also entered lock selection')
-            assert(ns.db.bagButtonPosition.x == 80 and ns.db.bagButtonPosition.y == 120)
+            assert(not bags.mode and not button.selection:IsShown())
             local opened
             EllesmereUI.OpenPlugin = function(_, _, page) opened = page end
-            button.scripts.OnMouseDown(button)
             button.scripts.OnClick(button, 'RightButton')
             assert(opened == 'Items' and not bags.mode)
-            parent:Hide()
+            button.scripts.OnClick(button, 'LeftButton')
+            EUI_MainBagFrame:Hide()
+            button.scripts.OnHide() -- native child OnHide when its parent closes
+            assert(not button:IsVisible() and not bags.mode)
+            EUI_MainBagFrame:Show()
             button.scripts.OnUpdate(button, 0.3)
-            assert(not button:IsShown())
-            parent:Show()
-            bags.Refresh()
-            assert(button:IsShown())
+            assert(button:IsVisible() and button.fits and not bags.mode)
             test.combat = true
             test.event('PLAYER_REGEN_DISABLED')
-            assert(not button:IsShown())
+            assert(not button:IsVisible())
+            button.scripts.OnClick(button, 'LeftButton')
+            assert(not bags.mode)
             test.combat = false
             test.event('PLAYER_REGEN_ENABLED')
-            assert(button:IsShown() and not bags.mode)
+            assert(button:IsVisible() and not bags.mode)
             assert(ns.SetEnabled('bags', false))
-            assert(not button:IsShown())
+            assert(not button:IsVisible())
+            assert(ns.db.bagButtonPosition == oldPosition, 'legacy saved data was removed or overwritten')
+        """)
+
+    def test_footer_button_avoids_money_currencies_and_reserved_resize_corner(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            EUI_MainBagFrame:Show()
+            local currency = CreateFrame('Frame', nil, test.bagFooter)
+            currency.rect = { 110, 107, 350, 17 }
+            local upperRow = CreateFrame('Frame', nil, test.bagFooter)
+            upperRow.rect = { 100, 135, 600, 20 }
+            local outside = CreateFrame('Frame', nil, test.bagFooter)
+            outside.rect = { 800, 104, 20, 20 }
+            assert(ns.SetEnabled('bags', true))
+            local button = ns.active.bags.launcher
+            local _, _, _, offset = button:GetPoint()
+            assert(button.fits and offset >= 364 and offset + 22 <= 446)
+            assert(offset + 22 <= 600 - 44)
+            assert(EUI_BagMoneyFrame.rect[1] == 550 and currency.rect[3] == 350)
+            assert(next(EUI_BagMoneyFrame.scripts) == nil and next(test.bagFooter.scripts) == nil)
+            currency.rect = { 100, 104, 600, 22 }
+            button.scripts.OnUpdate(button, 0.3)
+            assert(not button.fits and button.alpha == 0 and not button.mouseEnabled)
+            button.scripts.OnClick(button, 'LeftButton')
+            assert(not ns.active.bags.mode, 'the invisible button still accepted clicks')
+            currency:Hide()
+            button.scripts.OnUpdate(button, 0.3)
+            assert(button.fits and button.alpha == 1 and button.mouseEnabled)
+            local pendingLayout = CreateFrame('Frame', nil, test.bagFooter)
+            button.scripts.OnUpdate(button, 0.3)
+            assert(not button.fits and not button.mouseEnabled, 'button overlapped a footer control with pending geometry')
+            pendingLayout.rect = { 100, 135, 600, 20 }
+            button.scripts.OnUpdate(button, 0.3)
+            assert(button.fits and button.mouseEnabled)
+        """)
+
+    def test_footer_button_waits_for_named_frames_without_disabling_bag_safeguards(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            local root, money = EUI_MainBagFrame, EUI_BagMoneyFrame
+            EUI_MainBagFrame = nil
+            assert(ns.SetEnabled('bags', true))
+            local bags = ns.active.bags
+            assert(not bags.launcher and test.paint)
+            EUI_MainBagFrame, EUI_BagMoneyFrame = root, nil
+            root:Show()
+            bags.Refresh()
+            assert(bags.launcher and not bags.launcher.fits)
+            EUI_BagMoneyFrame = money
+            bags.launcher.scripts.OnUpdate(bags.launcher, 0.3)
+            assert(bags.launcher.fits and bags.launcher:GetParent() == root)
         """)
 
     def test_locked_bag_item_cancels_targeted_item_spells_without_acting(self):

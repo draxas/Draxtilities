@@ -73,10 +73,14 @@ Per le prove di vendita, eliminazione e riciclo usa oggetti che puoi perdere.
     intenzionale. Svuota il campo e cambia pagina. Verifica che
     gli aggiornamenti dell'inventario non interrompano la digitazione.
 12. In Settings, Scrap button deve occupare solo la colonna sinistra. Nelle
-    borse prova il pulsante Draxtilities: clic sinistro per selezionare, destro
-    per Items, trascinamento per spostarlo. Il trascinamento non deve attivare la
-    selezione. Verifica posizione dopo reload, chiusura e riapertura delle borse,
-    combattimento e disattivazione dei controlli, anche con banca e filtri aperti.
+    borse prova il lucchetto dorato nella fascia inferiore: clic sinistro per
+    selezionare, destro per Items, sfondo verde durante la selezione. Sposta e
+    ridimensiona la bag: il pulsante deve seguirla senza coprire oro, valute o
+    i controlli nativi. Prova Grid, List, Compact, scala diversa, molte valute,
+    finestre bloccate e sbloccate, banca aperta, borse vuote e ricerca senza
+    risultati. Se manca spazio il pulsante deve sparire e non intercettare clic.
+    Verifica chiusura, riapertura, reload, combattimento e disattivazione:
+    la selezione non deve riattivarsi da sola. Nessun file EUI va modificato.
 13. Lancia Disenchant e fai clic su una copia protetta nelle borse EUI: il
     puntamento deve essere annullato, l'oggetto e il lock conservati. Ripeti con
     la copia spostata dopo il disegno dello slot. Non dichiarare coperti i clic

@@ -49,7 +49,7 @@ function Frame:GetParent() return self.parent end
 function Frame:SetParent(parent) self.parent = parent end
 function Frame:SetID(value) self.id = value end
 function Frame:GetID() return self.id or 0 end
-function Frame:GetEffectiveScale() return 1 end
+function Frame:GetEffectiveScale() return self.effectiveScale or (self.parent and self.parent:GetEffectiveScale()) or 1 end
 function Frame:GetFrameStrata() return "MEDIUM" end
 function Frame:GetFrameLevel() return 1 end
 function Frame:HasAccessConstraints() return false end
@@ -60,6 +60,18 @@ function Frame:SetText(text)
 end
 function Frame:GetText() return self.text or "" end
 function Frame:GetWidth() return 800 end
+function Frame:GetRect() if self.rect then return unpack(self.rect) end end
+function Frame:GetChildren()
+    local children = {}
+    for _, frame in ipairs(test.frames) do
+        if frame.parent == self and frame.kind ~= "Texture" and frame.kind ~= "FontString" then
+            children[#children + 1] = frame
+        end
+    end
+    return unpack(children)
+end
+function Frame:SetAlpha(alpha) self.alpha = alpha end
+function Frame:EnableMouse(enabled) self.mouseEnabled = enabled end
 function Frame:HasFocus() return test.focus == self end
 function Frame:SetFocus()
     if test.focus == self then return end
@@ -84,7 +96,7 @@ function Frame:SetPropagateKeyboardInput(enabled) self.propagate = enabled end
 function Frame:CreateTexture() return CreateFrame("Texture") end
 function Frame:CreateFontString() return CreateFrame("FontString") end
 for _, name in ipairs({ "SetAllPoints", "ClearAllPoints", "SetSize", "SetWidth", "SetHeight",
-    "SetColorTexture", "SetFrameStrata", "SetFrameLevel", "SetScale", "EnableMouse", "EnableMouseMotion",
+    "SetColorTexture", "SetFrameStrata", "SetFrameLevel", "SetScale", "EnableMouseMotion",
     "RegisterForClicks", "RegisterForDrag", "SetPassThroughButtons", "SetMovable", "StartMoving", "StopMovingOrSizing",
     "SetWordWrap", "SetTexCoord", "SetJustifyH", "SetAutoFocus", "SetFontObject", "SetTextInsets" }) do
     Frame[name] = function() end
@@ -283,10 +295,15 @@ function test.hasText(text)
     end
     return false
 end
-EUI_Bags = {
-    RegisterItemOverlayIcon = function(_, callback) test.paint = callback end,
-    UnregisterItemOverlayIcon = function() test.paint = nil end,
-}
+EUI_MainBagFrame = CreateFrame("Frame", "EUI_MainBagFrame", UIParent)
+EUI_MainBagFrame.rect = { 100, 100, 600, 400 }
+EUI_MainBagFrame:Hide()
+test.bagFooter = CreateFrame("Frame", nil, EUI_MainBagFrame)
+EUI_BagMoneyFrame = CreateFrame("Frame", "EUI_BagMoneyFrame", test.bagFooter)
+EUI_BagMoneyFrame.rect = { 550, 107, 110, 14 }
+EUI_Bags = EUI_MainBagFrame
+function EUI_Bags.RegisterItemOverlayIcon(_, callback) test.paint = callback end
+function EUI_Bags.UnregisterItemOverlayIcon() test.paint = nil end
 StaticPopupDialogs = {}
 for _, key in ipairs({ "DELETE_GOOD_ITEM", "DELETE_GOOD_QUEST_ITEM", "DELETE_ITEM", "DELETE_QUEST_ITEM" }) do
     StaticPopupDialogs[key] = { OnAccept = DeleteCursorItem, OnCancel = ClearCursor }

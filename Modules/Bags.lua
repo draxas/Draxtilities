@@ -2,6 +2,58 @@ if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
 local controller
 
+local function CreateLockIcon(parent)
+    local icon = CreateFrame("Frame", nil, parent)
+    icon:SetSize(14, 14)
+    local function Part(x, y, width, height, r, g, b)
+        local texture = icon:CreateTexture(nil, "OVERLAY")
+        texture:SetPoint("BOTTOMLEFT", x, y)
+        texture:SetSize(width, height)
+        texture:SetColorTexture(r, g, b, 1)
+    end
+    Part(2, 1, 10, 7, 0.95, 0.76, 0.27)
+    Part(3, 8, 2, 4, 0.95, 0.76, 0.27)
+    Part(9, 8, 2, 4, 0.95, 0.76, 0.27)
+    Part(4, 11, 6, 2, 0.95, 0.76, 0.27)
+    Part(6, 3, 2, 3, 0.1, 0.1, 0.1)
+    return icon
+end
+
+-- Compatibility with the named windows in EUI Bags 9.7.8. Only geometry is
+-- read; all parenting, anchors, scripts and skin changes belong to our button.
+local function FooterButtonOffset(bagFrame)
+    local money = EUI_BagMoneyFrame
+    local footer = money and money:GetParent()
+    if not footer or footer:GetParent() ~= bagFrame then return end
+    local left, bottom, width = bagFrame:GetRect()
+    if not left or not bottom or not width or width <= 0 then return end
+    local scale, occupied = bagFrame:GetEffectiveScale(), {}
+    -- Keep the rightmost area free for EUI's window lock and resize grip.
+    local edge, limit, size = 6, width - 44, 22
+    for _, child in ipairs({ footer:GetChildren() }) do
+        if child:IsVisible() then
+            local x, y, w, h = child:GetRect()
+            if not x or not y or not w or not h then return end
+            if x and y and w and h then
+                local ratio = child:GetEffectiveScale() / scale
+                x, y, w, h = x * ratio - left, y * ratio - bottom, w * ratio, h * ratio
+                if y < 26 and y + h > 2 then
+                    local first, last = math.max(edge, x - 4), math.min(limit, x + w + 4)
+                    if first < last then occupied[#occupied + 1] = { first, last } end
+                end
+            end
+        end
+    end
+    table.sort(occupied, function(a, b) return a[1] < b[1] end)
+    local cursor, offset = edge, nil
+    for _, interval in ipairs(occupied) do
+        if interval[1] - cursor >= size then offset = interval[1] - size end
+        cursor = math.max(cursor, interval[2])
+    end
+    if limit - cursor >= size then offset = limit - size end
+    return offset
+end
+
 ns.Register("bags", {
     title = "EUI bag controls",
     description = "Lock icons, item selection, right-click sale confirmation and blocking of item spells targeted by clicking a locked item in EUI bags, including Disenchant. Requires EllesmereUIBags. EUI Quick Actions and macros are excluded.",
@@ -17,65 +69,71 @@ ns.Register("bags", {
         end
         local B = { layers = {}, mode = false }
         controller = B
-        function B.HasVisibleSlots()
-            for target in pairs(B.layers) do
-                local parent = target:GetParent()
-                local bag = parent and parent:GetID()
-                if target:IsVisible() and bag and bag >= 0 and bag <= Enum.BagIndex.ReagentBag
-                    and target:GetID() > 0 then return true end
+        function B.LayoutLauncher()
+            local button = B.launcher
+            if not button or not B.running or InCombatLockdown() then return end
+            local bagFrame = button:GetParent()
+            local offset = bagFrame:IsVisible() and FooterButtonOffset(bagFrame)
+            button.fits = type(offset) == "number"
+            if button.fits then
+                button:ClearAllPoints()
+                button:SetPoint("BOTTOMLEFT", bagFrame, "BOTTOMLEFT", offset, 4)
+                button:SetFrameLevel(bagFrame:GetFrameLevel() + 20)
             end
-            return false
+            button:SetAlpha(button.fits and 1 or 0)
+            button:EnableMouse(button.fits)
         end
         function B.SyncLauncher()
-            local visible = B.running and not InCombatLockdown() and B.HasVisibleSlots()
-            if visible and not B.launcher then
-                local button = CreateFrame("Button", nil, UIParent, "UIPanelButtonTemplate")
-                button:SetSize(180, 28)
-                button:SetFrameStrata("DIALOG")
-                button:SetMovable(true)
+            local bagFrame = EUI_MainBagFrame
+            local enabled = B.running and not InCombatLockdown()
+            if not bagFrame or type(bagFrame.GetRect) ~= "function" then
+                if B.launcher then B.launcher:Hide() end
+                return
+            end
+            if enabled and not B.launcher then
+                local button = CreateFrame("Button", nil, bagFrame, "UIPanelButtonTemplate")
+                button:SetSize(22, 20)
                 button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-                button:RegisterForDrag("LeftButton")
-                local position = ns.db.bagButtonPosition
-                local points = { TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
-                    RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true }
-                if type(position) == "table" and points[position.point] and points[position.relativePoint]
-                    and type(position.x) == "number" and type(position.y) == "number" then
-                    button:SetPoint(position.point, UIParent, position.relativePoint, position.x, position.y)
-                else button:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -360, 220) end
-                button:SetScript("OnMouseDown", function(self) self.dragged = false end)
-                button:SetScript("OnDragStart", function(self)
-                    if InCombatLockdown() then return end
-                    self.dragged = true
-                    self:StartMoving()
-                end)
-                button:SetScript("OnDragStop", function(self)
-                    self:StopMovingOrSizing()
-                    local point, _, relativePoint, x, y = self:GetPoint()
-                    ns.db.bagButtonPosition = { point = point, relativePoint = relativePoint, x = x, y = y }
-                end)
+                button.badge = CreateLockIcon(button)
+                button.badge:SetPoint("CENTER")
+                button.selection = button.badge:CreateTexture(nil, "BACKGROUND")
+                button.selection:SetPoint("TOPLEFT", -4, 3)
+                button.selection:SetPoint("BOTTOMRIGHT", 4, -3)
+                button.selection:SetColorTexture(0.05, 0.82, 0.62, 0.3)
                 button:SetScript("OnClick", function(self, mouseButton)
-                    if self.dragged or not B.running or InCombatLockdown() or not B.HasVisibleSlots() then return end
+                    if not self.fits or not self:IsVisible() or not B.running or InCombatLockdown() then return end
                     if mouseButton == "RightButton" then
                         B.SetMode(false)
                         EllesmereUI.OpenPlugin(ns.id, "Protection", "Items")
                     else B.SetMode(not B.mode) end
                 end)
                 button:SetScript("OnEnter", function(self)
-                    EllesmereUI.ShowWidgetTooltip(self, "Click to lock or unlock bag items.\nRight-click for locked items. Drag to move.")
+                    local action = B.mode and "Finish selecting item locks." or "Click to lock or unlock bag items."
+                    EllesmereUI.ShowWidgetTooltip(self, "Draxtilities\n" .. action .. "\nRight-click for locked items.")
                 end)
                 button:SetScript("OnLeave", EllesmereUI.HideWidgetTooltip)
+                button:SetScript("OnShow", B.LayoutLauncher)
+                button:SetScript("OnHide", function()
+                    EllesmereUI.HideWidgetTooltip()
+                    if B.mode then B.SetMode(false) end
+                end)
                 button:SetScript("OnUpdate", function(self, elapsed)
                     self.elapsed = (self.elapsed or 0) + elapsed
                     if self.elapsed < 0.2 then return end
                     self.elapsed = 0
-                    if not B.running or InCombatLockdown() or not B.HasVisibleSlots() then self:Hide() end
+                    if not B.running or InCombatLockdown() then self:Hide(); return end
+                    B.LayoutLauncher()
                 end)
                 ns.AddSkin(function(S) S.Button(button) end)
                 B.launcher = button
             end
             if B.launcher then
-                B.launcher:SetText(B.mode and "Finish selection" or "Lock / unlock items")
-                B.launcher:SetShown(visible)
+                if enabled then
+                    if B.launcher:GetParent() ~= bagFrame then B.launcher:SetParent(bagFrame) end
+                    B.LayoutLauncher()
+                end
+                B.launcher.selection:SetShown(B.mode)
+                B.launcher:SetShown(enabled)
             end
         end
         local function HideHover(layer)
@@ -149,18 +207,8 @@ ns.Register("bags", {
             f.shade = f:CreateTexture(nil, "BACKGROUND")
             f.shade:SetAllPoints()
             f.shade:SetColorTexture(0, 0, 0, 0.55)
-            f.badge = CreateFrame("Frame", nil, f)
-            f.badge:SetSize(14, 14)
+            f.badge = CreateLockIcon(f)
             f.badge:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 1, 1)
-            local function Part(x, y, w, h, r, g, b)
-                local t = f.badge:CreateTexture(nil, "OVERLAY")
-                t:SetPoint("BOTTOMLEFT", x, y); t:SetSize(w, h); t:SetColorTexture(r, g, b, 1)
-            end
-            Part(2, 1, 10, 7, 0.95, 0.76, 0.27)
-            Part(3, 8, 2, 4, 0.95, 0.76, 0.27)
-            Part(9, 8, 2, 4, 0.95, 0.76, 0.27)
-            Part(4, 11, 6, 2, 0.95, 0.76, 0.27)
-            Part(6, 3, 2, 3, 0.1, 0.1, 0.1)
             HideHover(f)
             f:Hide()
             return f
@@ -250,7 +298,7 @@ ns.Register("bags", {
             B.mode = false
             for _, layer in pairs(B.layers) do layer:Hide() end
             if B.bar then B.bar:Hide() end
-            if B.launcher then B.launcher:StopMovingOrSizing(); B.launcher:Hide() end
+            if B.launcher then B.launcher:Hide() end
         end
         function B.Stop() B.Suspend(); EUI_Bags.UnregisterItemOverlayIcon("Draxtilities") end
         EUI_Bags.RegisterItemOverlayIcon("Draxtilities", B.Paint)

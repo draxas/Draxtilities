@@ -44,7 +44,7 @@ al primo avvio.
 1. Apri le opzioni di EllesmereUI e seleziona **Draxtilities → Item Protection**,
    oppure digita `/dt`.
 2. In **Settings**, attiva **Enable Item Protection**.
-3. Apri le borse EUI e premi **Lock / unlock items** sul pulsante Draxtilities.
+3. Apri le borse EUI e premi il **lucchetto dorato** nella fascia inferiore.
    Puoi usare anche **Lock or unlock bag items** in Settings.
    Se hai appena attivato i controlli delle borse, chiudi e riapri le borse una volta.
 4. Fai clic sugli oggetti da proteggere o sbloccare. **Done**, Esc o un clic
@@ -55,10 +55,13 @@ stackabile non può essere protetto nemmeno quando ne possiedi un solo pezzo.
 Esci dalle modalità Junk o Pin delle borse EUI prima di selezionare i lucchetti.
 L'apertura del mercante e la chiusura delle borse terminano la selezione.
 
-Il pulsante Draxtilities è separato dalla finestra EUI. Trascinalo vicino alle
-borse nella posizione che preferisci: viene conservata tra sessioni e reload.
-Il clic destro apre Items. Il pulsante compare con le borse e rimane nascosto
-quando i controlli delle borse sono disattivati o sei in combattimento.
+Il lucchetto Draxtilities segue la finestra delle borse, anche quando la sposti
+o ne cambi la scala. Il clic sinistro attiva o termina la selezione; il destro
+apre Items. Durante la selezione il lucchetto ha uno sfondo verde.
+Il pulsante rimane nascosto quando i controlli delle borse sono disattivati o
+sei in combattimento. Se la fascia inferiore non ha spazio libero tra valute,
+oro e controlli della finestra, il pulsante viene nascosto: la selezione rimane
+disponibile in Settings e tramite bind.
 
 ### Settings
 

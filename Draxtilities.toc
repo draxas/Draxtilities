@@ -2,7 +2,7 @@
 ## Title: Draxtilities
 ## Notes: Item locks and confirmations for EllesmereUI.
 ## Author: Gianmarco
-## Version: 0.1.1
+## Version: 0.1.2
 ## X-Website: https://github.com/draxas/Draxtilities
 ## X-License: MIT
 ## Dependencies: EllesmereUI

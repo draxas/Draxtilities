@@ -22,7 +22,7 @@ Documenta nel repository le scelte necessarie a chi modifica il codice.
 | `Confirm.lua` | Conferme EUI con nuova verifica degli oggetti e del contesto prima di agire. |
 | `PanelGuard.lua` | Controllo condiviso dei pulsanti nativi di vendita junk, asta e riciclo. |
 | `TypedDelete.lua` | Conferma DELETE nativa prima della conferma EUI per le eliminazioni che la richiedono. |
-| `Modules/Bags.lua` | Azione `bags`: overlay, pulsante mobile, selezione, vendita manuale e blocco delle spell puntate sulle copie protette. |
+| `Modules/Bags.lua` | Azione `bags`: overlay, lucchetto nella fascia inferiore della bag, selezione, vendita manuale e blocco delle spell puntate sulle copie protette. |
 | `Modules/Cursor.lua` | Azione `cursor`: eliminazione nel mondo e vendita trascinando sul mercante. |
 | `Modules/Merchant.lua` | Azione `merchant`: pulsante Blizzard Sell All Junk. |
 | `Modules/Auctions.lua` | Azione `auctions`: pulsante Post della finestra nativa. |
@@ -89,12 +89,19 @@ mantieni lo stato dei controlli in tabelle di Draxtilities, senza scriverlo sui
 pulsanti EUI o Blizzard. Rispetta i vincoli dei frame protetti e del combattimento.
 Preserva i controlli sui valori segreti quando leggi gli identificativi Blizzard.
 
-Lock or unlock bag items è disponibile in Settings e sul pulsante mobile di
-Draxtilities. Il pulsante è un frame proprio su UIParent, spostabile e visibile
-in base agli slot ricevuti dal callback pubblico degli overlay. La posizione
-resta in `companion.bagButtonPosition`. La barra delle borse non espone un
-contratto pubblico per aggiungere pulsanti: non inserire controlli nel suo header
-e non agganciare funzioni EUI per seguirne la visibilità.
+Lock or unlock bag items è disponibile in Settings e sul lucchetto nella
+fascia inferiore della bag. Per esplicita richiesta dell'utente, l'adattatore
+legge i frame con nome `EUI_MainBagFrame` e `EUI_BagMoneyFrame`, verificati
+nei sorgenti EUI 9.7.8: non è un'API di registrazione dei pulsanti.
+Il pulsante è un frame proprio figlio di EUI_MainBagFrame. Eredita movimento,
+scala e visibilità; non agganciare script o funzioni EUI per seguirli e non
+modificare ancoraggi, dimensioni, script, campi o SavedVariables di EUI.
+La geometria dei figli del footer è letta con le API Frame Blizzard per trovare
+uno spazio libero sulla riga inferiore. Riserva l'angolo destro ai controlli
+nativi; se manca spazio o la geometria non è disponibile, nascondi il pulsante
+e disabilitane il mouse, conservando Settings e bind. Il vecchio campo
+`companion.bagButtonPosition` non è usato né cancellato. La barra superiore
+non espone un contratto per aggiungere pulsanti: non inserirvi controlli.
 La cattura del bind usa un frame proprio,
 senza dipendere dal builder interno dei keybind EUI. L'override appartiene a
 Draxtilities e viene rimosso alla disattivazione di EUI bag controls o dell'intero
