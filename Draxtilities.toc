@@ -11,6 +11,7 @@
 
 Core.lua
 Store.lua
+Bindings.lua
 Confirm.lua
 PanelGuard.lua
 TypedDelete.lua

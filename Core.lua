@@ -4,6 +4,20 @@ Draxtilities = ns
 ns.id, ns.modules, ns.order, ns.active = addon, {}, {}, {}
 local loader = CreateFrame("Frame")
 local events = CreateFrame("Frame")
+local skin
+local skinCallbacks = {}
+
+function ns.AddSkin(callback)
+    skinCallbacks[#skinCallbacks + 1] = callback
+    if skin then callback(skin) end
+end
+
+function ns.ToggleBagSelection()
+    if InCombatLockdown() then return end
+    local bags = ns.active.bags
+    if bags then bags.SetMode(not bags.mode)
+    else ns.Print("Enable Item Protection and EUI bag controls in Settings first.") end
+end
 
 function ns.Print(message)
     DEFAULT_CHAT_FRAME:AddMessage("|cff0cd29fDraxtilities:|r " .. message)
@@ -14,11 +28,17 @@ function ns.Register(key, spec)
     ns.order[#ns.order + 1] = key
 end
 
-function ns.RefreshOptions()
+function ns.RefreshOptions(preserveInput)
     local EUI = EllesmereUI
     if InCombatLockdown() or not EUI.GetActiveModule or not EUI.IsShown or not EUI:IsShown() then return end
     local key = EUI.GetPluginModuleKey(ns.id, "Protection")
-    if key and EUI:GetActiveModule() == key then EUI:RefreshPage(true) end
+    if key and EUI:GetActiveModule() == key then
+        -- Inventory events must not rebuild a text field while the user types.
+        -- The live search field consumes any delayed refresh on focus loss.
+        if preserveInput and GetCurrentKeyBoardFocus() then ns.optionsDirty = true; return end
+        ns.optionsDirty = nil
+        EUI:RefreshPage(true)
+    end
 end
 
 function ns.Refresh()
@@ -41,6 +61,7 @@ end
 function ns.Cancel()
     ns.CancelRequest()
     ns.CancelRemovals()
+    if ns.CancelBagBinding then ns.CancelBagBinding() end
     for _, controller in pairs(ns.active) do
         if controller.Cancel then controller.Cancel() end
     end
@@ -58,8 +79,8 @@ local function SyncEvents()
     end
 end
 
-function ns.SetEnabled(key, enabled)
-    if InCombatLockdown() then ns.Print("Change modules out of combat."); return false end
+function ns.SetEnabled(key, enabled, preservePreference)
+    if InCombatLockdown() then ns.Print("Change protection settings out of combat."); return false end
     local spec = ns.modules[key]
     if not spec then return false end
     if enabled and EllesmereUI.ItemProtection then
@@ -77,9 +98,32 @@ function ns.SetEnabled(key, enabled)
         ns.active[key].Stop()
         ns.active[key] = nil
     end
-    ns.db.modules[key] = enabled and true or false
+    if not preservePreference then ns.db.modules[key] = enabled and true or false end
+    if ns.UpdateBagBinding then ns.UpdateBagBinding() end
     SyncEvents()
     ns.Refresh()
+    return true
+end
+
+function ns.SetProtectionEnabled(enabled)
+    if InCombatLockdown() then return false end
+    if enabled and EllesmereUI.ItemProtection then
+        ns.Print("Disable the old integrated Item Protection and install the original EllesmereUI first.")
+        return false
+    end
+    ns.Cancel()
+    ns.db.itemProtectionEnabled = enabled and true or false
+    for _, key in ipairs(ns.order) do
+        ns.SetEnabled(key, enabled and ns.db.modules[key] == true, true)
+    end
+    ns.RefreshOptions()
+    return true
+end
+
+function ns.SetProtectionOption(key, enabled)
+    if InCombatLockdown() or not ns.modules[key] then return false end
+    if ns.db.itemProtectionEnabled then return ns.SetEnabled(key, enabled) end
+    ns.db.modules[key] = enabled and true or false
     return true
 end
 
@@ -108,6 +152,7 @@ events:SetScript("OnEvent", function(_, event, ...)
         ns.ReconcileRemovals()
     end
     if InCombatLockdown() then return end
+    if event == "PLAYER_REGEN_ENABLED" and ns.UpdateBagBinding then ns.UpdateBagBinding() end
     for _, key in ipairs(ns.order) do
         local controller = ns.active[key]
         if controller then
@@ -123,6 +168,9 @@ events:SetScript("OnEvent", function(_, event, ...)
             ns.Refresh()
         end)
     end
+    if event == "BAG_UPDATE_DELAYED" or event == "ITEM_DATA_LOAD_RESULT" or event == "PLAYER_REGEN_ENABLED" then
+        ns.RefreshOptions(true)
+    end
 end)
 
 loader:SetScript("OnEvent", function(_, _, name)
@@ -131,9 +179,13 @@ loader:SetScript("OnEvent", function(_, _, name)
     loader:SetScript("OnEvent", nil)
     ns.InitStore()
     if ns.RegisterOptions() == false then return end
-    for _, key in ipairs(ns.order) do
-        if ns.db.modules[key] == true then ns.SetEnabled(key, true) end
+    if EllesmereUI.RegisterSkin then
+        EllesmereUI.RegisterSkin(ns.id, function(S)
+            skin = S
+            for _, callback in ipairs(skinCallbacks) do callback(S) end
+        end)
     end
+    if ns.db.itemProtectionEnabled then ns.SetProtectionEnabled(true) end
 end)
 loader:RegisterEvent("ADDON_LOADED")
 
@@ -142,15 +194,13 @@ SLASH_DRAXTILITIES2 = "/dt"
 SlashCmdList.DRAXTILITIES = function(text)
     if not ns.db or InCombatLockdown() then return end
     if text == "lock" then
-        local bags = ns.active.bags
-        if bags then bags.SetMode(not bags.mode)
-        else ns.Print("Enable Bag Locks in Draxtilities first.") end
+        ns.ToggleBagSelection()
     elseif text == "cursor" then
         local item = ns.CaptureLocation(C_Cursor.GetCursorItem())
         if item and item.bag and ns.Toggle(item.bag, item.slot) then ClearCursor() end
     else
         if EllesmereUI.OpenPlugin then
-            EllesmereUI.OpenPlugin(ns.id, "Protection", text == "items" and "Items" or "Modules")
+            EllesmereUI.OpenPlugin(ns.id, "Protection", text == "items" and "Items" or "Settings")
         else ns.Print("Update EllesmereUI to a version with the public Plugin API.") end
     end
 end

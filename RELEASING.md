@@ -28,13 +28,19 @@ ma non il comportamento dei frame protetti, il taint o i clic nel client.
 
 Per le prove di vendita, eliminazione e riciclo usa oggetti che puoi perdere.
 
-1. Con tutti i moduli disabilitati, controlla il normale funzionamento delle
-   borse EUI: ricerca, modalità Junk, layout e scrolling.
-2. Abilita Bag Locks, riapri le borse e prova `/dt lock` nei layout Grid, List e
+1. Al primo avvio Item Protection deve essere disattivato, con le azioni
+   preselezionate ma inattive. Abilitalo e disabilitalo, controllando che lucchetti
+   e preferenze restino salvati e che le borse EUI funzionino normalmente da spento.
+2. Abilita Item Protection ed EUI bag controls, riapri le borse e prova
+   **Lock or unlock bag items**, il bind e `/dt lock` nei layout Grid, List e
    Compact, con scrolling, scala UI diversa e borsa reagenti separata.
    Verifica due copie identiche e il rifiuto di uno stackabile in quantità 1.
-3. In Items, prova entrambi gli stati di Protected only. Sposta una copia
-   prima di usare il pulsante della sua riga: il lock non deve passare a un'altra copia.
+3. Items deve mostrare solo le copie protette. Prova ricerca e paginazione con
+   due copie identiche, poi Unlock per una copia assente a modulo spento.
+   Verifica il tooltip WoW solo sulle icone: il resto della riga non deve
+   attivarlo. Sposta la copia prima del mouse hover
+   e controlla che non venga mostrato l'oggetto finito al suo posto nello slot.
+   Passa da Items a Settings e torna: righe e lucchetti devono aggiornarsi.
 4. Prova la vendita con clic destro e trascinando sul mercante. Annulla e
    conferma entrambe le operazioni; una vendita deve conservare il lock nel registro.
 5. Trascina fuori dalle borse un oggetto raro o epico protetto. Prova DELETE
@@ -44,12 +50,37 @@ Per le prove di vendita, eliminazione e riciclo usa oggetti che puoi perdere.
    l'operazione modificata deve richiederne un'altra.
 7. Entra in combattimento durante una conferma o dopo averla accettata.
    Controlla che le protezioni vengano sospese e che all'uscita non parta alcuna
-   azione. Fuori dal combattimento, disabilita i moduli e verifica che i pulsanti
+   azione. Fuori dal combattimento, disabilita Item Protection e verifica che i pulsanti
    nativi tornino al normale funzionamento.
 8. Annulla un'eliminazione o interrompi un riciclo, poi vendi la stessa copia:
    il suo lock deve rimanere nel registro. Controlla invece la rimozione del
    record dopo un'eliminazione o un riciclo completati.
-9. Esegui `/reload` e controlla la persistenza dei lucchetti e dei moduli abilitati.
+9. Esegui `/reload` e controlla la persistenza di lucchetti, stato del modulo e
+   preferenze delle azioni. Prova anche il passaggio dalle vecchie impostazioni:
+   devono essere ripristinate solo le azioni precedentemente attive.
+10. Configura e cancella un bind in Settings, anche usando un tasto già
+    assegnato. Controlla Save shortcut, Clear shortcut, Esc e Cancel. Disabilita
+    EUI bag controls e poi l'intero modulo: il tasto deve tornare alla sua
+    assegnazione normale. Riabilita i controlli ed esegui `/reload`: il bind scelto
+    deve essere ripristinato. Entra in combattimento durante la scelta e durante
+    la selezione: nessuna delle due deve ripartire da sola alla fine.
+11. Apri Items dopo una ricerca globale EUI. Controlla ricerca, tooltip,
+    pulsanti e aggiornamenti dopo spostamenti, cambi di lock e combattimento,
+    anche con scala UI e finestra EUI ridotte. La lista deve filtrarsi a ogni
+    carattere, anche con Backspace, incolla e inserimento a metà del testo,
+    conservando focus e cursore, senza selezionare automaticamente il testo e
+    sostituirlo al carattere successivo. Prova anche Ctrl+A per una sostituzione
+    intenzionale. Svuota il campo e cambia pagina. Verifica che
+    gli aggiornamenti dell'inventario non interrompano la digitazione.
+12. In Settings, Scrap button deve occupare solo la colonna sinistra. Nelle
+    borse prova il pulsante Draxtilities: clic sinistro per selezionare, destro
+    per Items, trascinamento per spostarlo. Il trascinamento non deve attivare la
+    selezione. Verifica posizione dopo reload, chiusura e riapertura delle borse,
+    combattimento e disattivazione dei controlli, anche con banca e filtri aperti.
+13. Lancia Disenchant e fai clic su una copia protetta nelle borse EUI: il
+    puntamento deve essere annullato, l'oggetto e il lock conservati. Ripeti con
+    la copia spostata dopo il disegno dello slot. Non dichiarare coperti i clic
+    sulle Quick Actions EUI o le macro che applicano la spell direttamente allo slot.
 
 Riporta nel riepilogo della modifica quali prove sono state eseguite.
 

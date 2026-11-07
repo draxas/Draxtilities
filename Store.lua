@@ -9,7 +9,22 @@ function ns.InitStore()
     ns.db = DraxtilitiesDB.companion
     if type(ns.db.modules) ~= "table" then ns.db.modules = {} end
     if type(ns.db.locks) ~= "table" then ns.db.locks = {} end
-    ns.db.version = 1
+    if type(ns.db.itemProtectionEnabled) ~= "boolean" then
+        -- Existing action preferences retain their exact state. A fresh
+        -- installation prepares all actions, behind the disabled module.
+        local configured = next(ns.db.modules) ~= nil
+        ns.db.itemProtectionEnabled = false
+        for _, enabled in pairs(ns.db.modules) do
+            if enabled == true then ns.db.itemProtectionEnabled = true end
+        end
+        for _, key in ipairs(ns.order) do
+            if ns.db.modules[key] == nil then ns.db.modules[key] = not configured end
+        end
+    end
+    for _, key in ipairs(ns.order) do
+        if ns.db.modules[key] == nil then ns.db.modules[key] = true end
+    end
+    ns.db.version = 2
 end
 
 function ns.CaptureLocation(location)

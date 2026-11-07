@@ -9,7 +9,7 @@ e riciclo nelle operazioni elencate sotto.
 
 - World of Warcraft Retail.
 - EllesmereUI 9.7.3 o successiva.
-- EllesmereUIBags per usare Bag Locks nelle borse.
+- EllesmereUIBags per i controlli e la selezione dei lucchetti nelle borse EUI.
 
 ## Installazione
 
@@ -33,52 +33,94 @@ Scarica lo ZIP dell'addon dalla pagina
 Il file TOC deve trovarsi in `AddOns/Draxtilities/Draxtilities.toc`.
 Usa il pacchetto dell'addon allegato alla release, anziché gli archivi **Source code**.
 
-## Primo utilizzo
+## Item Protection
 
-1. Digita `/dt` per aprire le opzioni di Draxtilities.
-2. Nella pagina **Modules**, abilita i moduli che vuoi usare. Al primo avvio sono tutti disabilitati.
-3. Per selezionare gli oggetti dalle borse, abilita **Bag Locks**,
-   chiudi e riapri le borse, poi digita `/dt lock`.
-4. Fai clic sinistro sugli oggetti da proteggere o sbloccare.
-   Premi Esc, fai clic destro su un oggetto o usa **Done** per uscire dalla selezione.
+Draxtilities raccoglie funzionalità indipendenti, ciascuna con le proprie
+impostazioni. Il modulo disponibile al momento è **Item Protection**, disattivato
+al primo avvio.
+
+### Primo utilizzo
+
+1. Apri le opzioni di EllesmereUI e seleziona **Draxtilities → Item Protection**,
+   oppure digita `/dt`.
+2. In **Settings**, attiva **Enable Item Protection**.
+3. Apri le borse EUI e premi **Lock / unlock items** sul pulsante Draxtilities.
+   Puoi usare anche **Lock or unlock bag items** in Settings.
+   Se hai appena attivato i controlli delle borse, chiudi e riapri le borse una volta.
+4. Fai clic sugli oggetti da proteggere o sbloccare. **Done**, Esc o un clic
+   destro terminano la selezione.
 
 La protezione è disponibile per gli oggetti non stackabili. Un materiale
 stackabile non può essere protetto nemmeno quando ne possiedi un solo pezzo.
-Prima di usare `/dt lock`, esci dalle modalità Junk o Pin delle borse EUI.
+Esci dalle modalità Junk o Pin delle borse EUI prima di selezionare i lucchetti.
 L'apertura del mercante e la chiusura delle borse terminano la selezione.
 
-Puoi applicare e rimuovere i lucchetti anche dalla pagina **Items**, che elenca
-le singole copie degli oggetti non stackabili nelle borse, comprese quelle che
-EUI raggruppa nella stessa icona. Per aggiungere un lucchetto deve essere attivo
-almeno un modulo. Con **Protected only** attivo vengono mostrati tutti i lucchetti
-salvati, anche quando la copia non è più nelle borse del personaggio.
-Usa **Refresh** per aggiornare l'elenco.
+Il pulsante Draxtilities è separato dalla finestra EUI. Trascinalo vicino alle
+borse nella posizione che preferisci: viene conservata tra sessioni e reload.
+Il clic destro apre Items. Il pulsante compare con le borse e rimane nascosto
+quando i controlli delle borse sono disattivati o sei in combattimento.
 
-## Moduli
+### Settings
 
-| Modulo | Operazioni coperte |
+**Enable Item Protection** controlla l'intera funzionalità. Disattivandolo si
+spengono tutte le azioni e il bind, conservando i lucchetti e le preferenze.
+Le opzioni in **Actions** scelgono quali ingressi proteggere; non sono moduli
+separati di Draxtilities.
+
+| Opzione | Funzione |
 |---|---|
-| Bag Locks | Lucchetti e selezione nelle borse EUI; conferma della vendita con clic destro al mercante. |
-| Cursor Safeguards | Conferma quando trascini un oggetto protetto nel mondo per eliminarlo o sul mercante per venderlo. Per gli oggetti che richiedono DELETE, la conferma EUI arriva dopo quella digitata. |
-| Native Junk Sale | Pulsante Blizzard **Sell All Junk**. |
-| Native Auctions | Pulsante **Post** della finestra aste Blizzard per oggetti non stackabili. Con copie protette corrispondenti nelle borse, si mette all'asta una copia alla volta. |
-| Native Scrapping | Pulsante di riciclo della finestra Blizzard. |
+| EUI bag controls | Icone, pulsante di selezione, conferma delle vendite manuali e blocco delle spell puntate con un clic su una copia protetta nelle borse, incluso Disenchant. Richiede EllesmereUIBags. |
+| Dragged item sales and deletion | Conferma quando trascini una copia protetta nel mondo per eliminarla o sul mercante per venderla. La conferma EUI segue quella DELETE, quando richiesta. |
+| Sell All Junk button | Pulsante Blizzard **Sell All Junk**. |
+| Auction Post button | Pulsante **Post** della finestra aste Blizzard per oggetti non stackabili. Con copie protette corrispondenti nelle borse, si mette all'asta una copia alla volta. |
+| Scrap button | Pulsante di riciclo della finestra Blizzard. |
 
-Per **Native Junk Sale**, **Native Auctions** e **Native Scrapping**, quando
-l'azione coinvolge copie protette:
+Al primo avvio le azioni sono preselezionate, ma rimangono inattive finché non
+abiliti Item Protection. L'aggiornamento conserva le vecchie scelte: se almeno
+una protezione era già attiva, Item Protection rimane attivo con quelle sole
+azioni.
+
+Per i pulsanti **Sell All Junk**, **Post** e riciclo, con copie protette:
 
 1. Premi il pulsante dell'azione.
 2. Conferma il popup EUI.
 3. Premi di nuovo il pulsante dell'azione per completarla.
 
-Prima dell'esecuzione vengono ricontrollati gli oggetti selezionati e i dati
-dell'operazione, compresi prezzo, durata e quantità delle aste.
-Una selezione o un'operazione diversa richiede una nuova conferma.
-Le operazioni senza oggetti protetti procedono normalmente.
+Prima dell'esecuzione vengono ricontrollati gli oggetti e i dati dell'operazione,
+compresi prezzo, durata e quantità delle aste. Cambiare l'operazione richiede
+un'altra conferma. Senza copie protette, l'azione procede normalmente.
 
-Le protezioni sono attive fuori dal combattimento. Quando entri in combattimento,
-conferme e autorizzazioni vengono annullate. Per riprendere un'operazione
-interrotta, avviala di nuovo dopo il combattimento.
+Le protezioni sono attive fuori dal combattimento. Entrare in combattimento
+annulla conferme e autorizzazioni; nessuna azione viene ripresa automaticamente
+alla sua uscita.
+
+### Selezione con la tastiera
+
+In Settings, **Selection shortcut** permette di scegliere un tasto per la stessa
+selezione nelle borse. Premi una combinazione e poi **Save shortcut**. Il dialogo
+mostra l'eventuale azione già assegnata; **Clear shortcut** rimuove il bind,
+mentre Esc o **Cancel** lasciano invariata la scelta.
+
+Il bind richiede Item Protection e **EUI bag controls** attivi e funziona fuori
+dal combattimento. Disattivando i controlli delle borse o l'intero modulo, il
+tasto torna alla normale assegnazione di WoW. La combinazione resta salvata per
+la successiva attivazione. Al primo avvio non è assegnato alcun tasto.
+Il combattimento annulla anche la scelta di un nuovo bind senza salvarlo.
+
+### Items
+
+Items elenca solo le copie già protette, comprese quelle assenti dalle borse.
+**Search locked items** filtra l'elenco a ogni carattere, senza premere Invio.
+I risultati sono ordinati per nome.
+
+Ogni riga mostra l'icona, il nome e la posizione della copia. Per quelle assenti
+riporta il proprietario salvato e un suffisso del GUID per distinguerle.
+Passando il mouse sull'icona compare il tooltip WoW dell'oggetto. Se la copia
+si è spostata, viene usato il link salvato anziché mostrare un'altra copia
+rimasta nello slot.
+
+**Unlock** rimuove il lucchetto, anche se la copia è assente o Item Protection
+è disattivato. Per aggiungere lucchetti usa la selezione nelle borse o `/dt cursor`.
 
 ## Comandi
 
@@ -86,30 +128,35 @@ interrotta, avviala di nuovo dopo il combattimento.
 |---|---|
 | `/dt` o `/draxtilities` | Apre le opzioni. |
 | `/dt items` | Apre la pagina Items. |
-| `/dt lock` | Attiva o termina la selezione dei lucchetti nelle borse. Richiede Bag Locks. |
-| `/dt cursor` | Protegge o sblocca la copia sul cursore. Richiede almeno un modulo attivo. |
+| `/dt lock` | Attiva o termina la selezione dei lucchetti nelle borse. Richiede EUI bag controls. |
+| `/dt cursor` | Protegge o sblocca la copia sul cursore. Richiede un'azione di Item Protection attiva. |
 
-Puoi usare `/dt lock` in una macro e assegnarle un tasto.
+Il bind configurabile in Settings permette di usare la selezione senza
+comandi in chat. `/dt lock` rimane disponibile anche per le macro.
 
 ## Limiti della protezione
 
-I lucchetti coprono le operazioni indicate nella tabella dei moduli.
+I lucchetti coprono le operazioni indicate nella tabella delle azioni.
 Queste azioni restano escluse:
 
 - Vendite automatiche e pulsante **Sell Junk** di EllesmereUI.
 - Apertura automatica dei contenitori.
-- Disincantamento, altri incantesimi sugli oggetti ed EUI Quick Actions.
+- Incantesimi sugli oggetti applicati direttamente allo slot da macro,
+  EUI Quick Actions o altri ingressi esterni al puntamento manuale nelle borse EUI.
 - Posta, scambi, creazione degli oggetti e consegne delle quest.
 - Vendita, eliminazione, aste e riciclo avviati da macro o pulsanti di altri addon.
 
 Se usi i lucchetti, disabilita la vendita automatica in EUI e negli altri addon.
 Controlla la copia scelta prima di usare una delle azioni escluse.
-Bag Locks blocca il clic su un oggetto protetto quando stai scegliendo il
-bersaglio di un incantesimo. Per usarlo come bersaglio, rimuovi prima il lucchetto.
-Questo controllo non copre gli altri modi di avviare l'incantesimo.
+Con EUI bag controls attivo, lanciare Disenchant e poi fare clic su una copia
+protetta nelle borse annulla il puntamento e conserva il lucchetto. Lo stesso
+blocco vale per le altre spell puntate manualmente su una copia protetta.
+Per usarla come bersaglio, rimuovi prima il lucchetto. Questo controllo non
+intercetta EUI Quick Actions, macro o spell già applicate allo slot da altri addon.
 
 Quando EUI raggruppa più copie in una sola icona, il lucchetto si riferisce
-alla copia visualizzata. Usa **Items** per vedere e gestire le altre copie.
+alla copia visualizzata. **Items** elenca ogni copia già protetta, anche quelle
+nascoste dal raggruppamento; non permette di proteggere copie ancora senza lock.
 
 ## Salvataggio dei lucchetti
 
@@ -120,7 +167,7 @@ I lucchetti restano nel registro anche quando la copia viene spostata,
 equipaggiata, venduta o non si trova nelle borse del personaggio.
 La rimozione automatica riguarda le eliminazioni e i ricicli osservati da
 Draxtilities. Per rimuovere un lucchetto che non serve più, usa
-**Remove protection** nella pagina Items.
+**Unlock** nella pagina Items.
 
 ## Segnalazioni e sviluppo
 

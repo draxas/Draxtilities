@@ -3,8 +3,8 @@ local _, ns = ...
 local controller
 
 ns.Register("bags", {
-    title = "Bag Locks",
-    description = "Badges, selection and manual right-click sales in EUI bags. Use /dt lock to select, or the Items page to manage every copy hidden by grouping. Item-targeted spells and EUI Quick Actions are excluded.",
+    title = "EUI bag controls",
+    description = "Lock icons, item selection, right-click sale confirmation and blocking of item spells targeted by clicking a locked item in EUI bags, including Disenchant. Requires EllesmereUIBags. EUI Quick Actions and macros are excluded.",
     events = { "MERCHANT_SHOW", "MERCHANT_CLOSED", "BAG_CLOSED" },
     Start = function()
         if not EUI_Bags or type(EUI_Bags.RegisterItemOverlayIcon) ~= "function"
@@ -17,6 +17,67 @@ ns.Register("bags", {
         end
         local B = { layers = {}, mode = false }
         controller = B
+        function B.HasVisibleSlots()
+            for target in pairs(B.layers) do
+                local parent = target:GetParent()
+                local bag = parent and parent:GetID()
+                if target:IsVisible() and bag and bag >= 0 and bag <= Enum.BagIndex.ReagentBag
+                    and target:GetID() > 0 then return true end
+            end
+            return false
+        end
+        function B.SyncLauncher()
+            local visible = B.running and not InCombatLockdown() and B.HasVisibleSlots()
+            if visible and not B.launcher then
+                local button = CreateFrame("Button", nil, UIParent, "UIPanelButtonTemplate")
+                button:SetSize(180, 28)
+                button:SetFrameStrata("DIALOG")
+                button:SetMovable(true)
+                button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+                button:RegisterForDrag("LeftButton")
+                local position = ns.db.bagButtonPosition
+                local points = { TOPLEFT = true, TOP = true, TOPRIGHT = true, LEFT = true, CENTER = true,
+                    RIGHT = true, BOTTOMLEFT = true, BOTTOM = true, BOTTOMRIGHT = true }
+                if type(position) == "table" and points[position.point] and points[position.relativePoint]
+                    and type(position.x) == "number" and type(position.y) == "number" then
+                    button:SetPoint(position.point, UIParent, position.relativePoint, position.x, position.y)
+                else button:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -360, 220) end
+                button:SetScript("OnMouseDown", function(self) self.dragged = false end)
+                button:SetScript("OnDragStart", function(self)
+                    if InCombatLockdown() then return end
+                    self.dragged = true
+                    self:StartMoving()
+                end)
+                button:SetScript("OnDragStop", function(self)
+                    self:StopMovingOrSizing()
+                    local point, _, relativePoint, x, y = self:GetPoint()
+                    ns.db.bagButtonPosition = { point = point, relativePoint = relativePoint, x = x, y = y }
+                end)
+                button:SetScript("OnClick", function(self, mouseButton)
+                    if self.dragged or not B.running or InCombatLockdown() or not B.HasVisibleSlots() then return end
+                    if mouseButton == "RightButton" then
+                        B.SetMode(false)
+                        EllesmereUI.OpenPlugin(ns.id, "Protection", "Items")
+                    else B.SetMode(not B.mode) end
+                end)
+                button:SetScript("OnEnter", function(self)
+                    EllesmereUI.ShowWidgetTooltip(self, "Click to lock or unlock bag items.\nRight-click for locked items. Drag to move.")
+                end)
+                button:SetScript("OnLeave", EllesmereUI.HideWidgetTooltip)
+                button:SetScript("OnUpdate", function(self, elapsed)
+                    self.elapsed = (self.elapsed or 0) + elapsed
+                    if self.elapsed < 0.2 then return end
+                    self.elapsed = 0
+                    if not B.running or InCombatLockdown() or not B.HasVisibleSlots() then self:Hide() end
+                end)
+                ns.AddSkin(function(S) S.Button(button) end)
+                B.launcher = button
+            end
+            if B.launcher then
+                B.launcher:SetText(B.mode and "Finish selection" or "Lock / unlock items")
+                B.launcher:SetShown(visible)
+            end
+        end
         local function HideHover(layer)
             layer.fill:Hide()
             for _, edge in ipairs(layer.edges) do edge:Hide() end
@@ -42,7 +103,8 @@ ns.Register("bags", {
             end
             if not ns.IsLocked(item) then return end
             if SpellCanTargetItem() or SpellCanTargetItemID() then
-                ns.Print("Item-targeted spells are outside this module. Remove protection explicitly before using them.")
+                SpellStopTargeting()
+                ns.Print("This item is locked. Unlock it before disenchanting or casting an item spell on it.")
             elseif IsModifiedClick() then
                 HandleModifiedItemClick(item.link, item.location)
             elseif button == "RightButton" then
@@ -133,6 +195,7 @@ ns.Register("bags", {
             if B.mode or merchant then layer:SetPassThroughButtons("MiddleButton")
             else layer:SetPassThroughButtons("RightButton", "MiddleButton") end
             layer:SetShown(B.mode or locked)
+            B.SyncLauncher()
         end
         function B.Refresh()
             if not B.running or InCombatLockdown() then return end
@@ -142,6 +205,7 @@ ns.Register("bags", {
                     B.Paint(target, { bag = bag, slot = slot, info = C_Container.GetContainerItemInfo(bag, slot) })
                 else layer:Hide() end
             end
+            B.SyncLauncher()
         end
         function B.SetMode(on)
             if not B.running or InCombatLockdown() then return end
@@ -159,22 +223,20 @@ ns.Register("bags", {
                 bar:SetScript("OnDragStop", bar.StopMovingOrSizing)
                 local label = bar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
                 label:SetPoint("TOP", 0, -12)
-                label:SetText("Click copies to lock/unlock. Esc ends selection.")
+                label:SetText("Click items to lock or unlock. Esc to finish.")
                 local stop = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
                 stop:SetSize(100, 22); stop:SetPoint("BOTTOMLEFT", 15, 10); stop:SetText("Done")
                 stop:SetScript("OnClick", function() B.SetMode(false) end)
                 local manage = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
-                manage:SetSize(160, 22); manage:SetPoint("BOTTOMRIGHT", -15, 10); manage:SetText("Manage every copy")
+                manage:SetSize(160, 22); manage:SetPoint("BOTTOMRIGHT", -15, 10); manage:SetText("Locked items")
                 manage:SetScript("OnClick", function()
                     B.SetMode(false); EllesmereUI.OpenPlugin(ns.id, "Protection", "Items")
                 end)
                 bar:SetScript("OnHide", function() B.mode = false; B.Refresh() end)
                 UISpecialFrames[#UISpecialFrames + 1] = "DraxtilitiesSelection"
-                if EllesmereUI.RegisterSkin then
-                    EllesmereUI.RegisterSkin(ns.id, function(S)
-                        S.Shell(bar); S.Button(stop); S.Button(manage); S.Font(label)
-                    end)
-                end
+                ns.AddSkin(function(S)
+                    S.Shell(bar); S.Button(stop); S.Button(manage); S.Font(label)
+                end)
                 B.bar = bar
             end
             if B.bar then B.bar:SetShown(B.mode) end
@@ -188,6 +250,7 @@ ns.Register("bags", {
             B.mode = false
             for _, layer in pairs(B.layers) do layer:Hide() end
             if B.bar then B.bar:Hide() end
+            if B.launcher then B.launcher:StopMovingOrSizing(); B.launcher:Hide() end
         end
         function B.Stop() B.Suspend(); EUI_Bags.UnregisterItemOverlayIcon("Draxtilities") end
         EUI_Bags.RegisterItemOverlayIcon("Draxtilities", B.Paint)

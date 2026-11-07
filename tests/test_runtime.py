@@ -15,7 +15,7 @@ class RuntimeTests(unittest.TestCase):
         self.lua.execute((ROOT / "tests/wow_mock.lua").read_text(encoding="utf-8"))
         self.ns = self.lua.table()
         self.lua.globals().ns = self.ns
-        for name in ("Core.lua", "Store.lua", "Confirm.lua", "PanelGuard.lua", "TypedDelete.lua"):
+        for name in ("Core.lua", "Store.lua", "Bindings.lua", "Confirm.lua", "PanelGuard.lua", "TypedDelete.lua"):
             self.load(name)
         self.lua.execute("ns.InitStore()")
 
@@ -271,7 +271,69 @@ class RuntimeTests(unittest.TestCase):
             test.event('ADDON_LOADED', 'Draxtilities')
             assert(test.plugin.label == 'Draxtilities')
             assert(#ns.order == 5 and next(ns.active) == nil)
-            assert(#test.plugin.modules[1].pages == 3)
+            assert(#test.plugin.modules[1].pages == 2)
+            assert(test.plugin.modules[1].pages[1] == 'Settings' and not ns.db.itemProtectionEnabled)
+        """)
+
+    def test_item_protection_master_switch_preserves_actions_locks_and_shortcut(self):
+        for name in ("Bags", "Cursor", "Merchant", "Auctions", "Scrapping"):
+            self.load(f"Modules/{name}.lua")
+        self.load("Options.lua")
+        self.run_lua("""
+            DraxtilitiesDB = {}
+            ns.InitStore()
+            ns.RegisterOptions()
+            assert(not ns.db.itemProtectionEnabled and next(ns.active) == nil)
+            for _, key in ipairs(ns.order) do assert(ns.db.modules[key] == true) end
+            test.buildPage('Settings')
+            assert(test.findControl('EUI bag controls').disabled())
+            test.findControl('Enable Item Protection').setValue(true)
+            for _, key in ipairs(ns.order) do assert(ns.active[key]) end
+            assert(ns.SetProtectionOption('auctions', false))
+            assert(not ns.active.auctions and ns.active.bags)
+            test.put(0, 1, 'Item-A')
+            assert(ns.Toggle(0, 1) and ns.SetBagBinding('ALT-L'))
+            assert(ns.SetProtectionEnabled(false))
+            assert(next(ns.active) == nil and ns.db.locks['Item-A'])
+            assert(ns.db.modules.bags and not ns.db.modules.auctions and ns.db.bagLockKey == 'ALT-L')
+            assert(GetBindingAction('ALT-L', true) == '')
+            assert(ns.SetProtectionEnabled(true))
+            assert(ns.active.bags and not ns.active.auctions and ns.db.locks['Item-A'])
+            assert(GetBindingAction('ALT-L', true):find('DraxtilitiesLockBinding', 1, true))
+            test.combat = true
+            assert(not ns.SetProtectionEnabled(false) and not ns.SetProtectionOption('bags', false))
+            assert(ns.db.itemProtectionEnabled and ns.active.bags)
+        """)
+
+    def test_legacy_action_preferences_migrate_without_enabling_other_actions(self):
+        for name in ("Bags", "Cursor", "Merchant", "Auctions", "Scrapping"):
+            self.load(f"Modules/{name}.lua")
+        self.load("Options.lua")
+        self.run_lua("""
+            DraxtilitiesDB = { companion = { modules = { bags = true, merchant = false },
+                locks = { ['Old-copy'] = { id = 100 } }, bagLockKey = 'ALT-L' } }
+            test.event('ADDON_LOADED', 'Draxtilities')
+            assert(ns.db.itemProtectionEnabled and ns.active.bags)
+            assert(not ns.active.cursor and not ns.active.merchant and not ns.active.auctions and not ns.active.scrapping)
+            assert(ns.db.modules.cursor == false and ns.db.locks['Old-copy'] and ns.db.bagLockKey == 'ALT-L')
+            ns.SetProtectionEnabled(false)
+            assert(ns.db.modules.bags and not ns.db.modules.merchant)
+            ns.InitStore()
+            assert(not ns.db.itemProtectionEnabled, 'saved disabled master switch was inferred from its action preferences')
+            assert(next(ns.active) == nil and ns.db.locks['Old-copy'])
+        """)
+
+    def test_disabled_module_remains_inactive_after_load_with_prepared_actions(self):
+        for name in ("Bags", "Cursor", "Merchant", "Auctions", "Scrapping"):
+            self.load(f"Modules/{name}.lua")
+        self.load("Options.lua")
+        self.run_lua("""
+            DraxtilitiesDB = { companion = { itemProtectionEnabled = false,
+                modules = { bags = true, cursor = true }, bagLockKey = 'ALT-L' } }
+            test.event('ADDON_LOADED', 'Draxtilities')
+            assert(next(ns.active) == nil and GetBindingAction('ALT-L', true) == '')
+            assert(ns.SetProtectionOption('bags', false))
+            assert(next(ns.active) == nil and not ns.db.modules.bags)
         """)
 
     def test_bag_selection_and_hidden_slot_cleanup(self):
@@ -294,6 +356,358 @@ class RuntimeTests(unittest.TestCase):
             target:Hide()
             layer.scripts.OnUpdate(layer)
             assert(not layer:IsVisible(), 'overlay stayed visible after its EUI slot was hidden')
+        """)
+
+    def test_bag_shortcut_restores_normal_key_when_module_is_disabled(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            test.bindings['ALT-L'] = 'TOGGLEQUESTLOG'
+            ns.db.bagLockKey = 'ALT-L'
+            ns.UpdateBagBinding()
+            assert(GetBindingAction('ALT-L', true) == 'TOGGLEQUESTLOG')
+            assert(ns.SetEnabled('bags', true))
+            test.pressKey('ALT-L')
+            assert(ns.active.bags.mode)
+            test.pressKey('ALT-L')
+            assert(not ns.active.bags.mode)
+            assert(ns.SetEnabled('bags', false))
+            assert(GetBindingAction('ALT-L', true) == 'TOGGLEQUESTLOG')
+            assert(ns.db.bagLockKey == 'ALT-L')
+            assert(ns.SetEnabled('bags', true))
+            assert(GetBindingAction('ALT-L', true):find('DraxtilitiesLockBinding', 1, true))
+            assert(ns.SetBagBinding(nil))
+            assert(GetBindingAction('ALT-L', true) == 'TOGGLEQUESTLOG')
+        """)
+
+    def test_shortcut_requires_enabled_module_and_does_not_act_in_combat(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            assert(not ns.SetBagBinding('ALT-L'))
+            ns.BeginBagBinding()
+            assert(not DraxtilitiesBindingCapture)
+            assert(ns.SetEnabled('bags', true))
+            assert(ns.SetBagBinding('ALT-L'))
+            test.combat = true
+            test.event('PLAYER_REGEN_DISABLED')
+            test.pressKey('ALT-L')
+            assert(not ns.active.bags.mode)
+            assert(not ns.SetBagBinding('ALT-M'))
+            test.combat = false
+            test.event('PLAYER_REGEN_ENABLED')
+            assert(not ns.active.bags.mode, 'selection was queued during combat')
+            test.pressKey('ALT-L')
+            assert(ns.active.bags.mode)
+        """)
+
+    def test_shortcut_capture_requires_acceptance_and_cancels_on_combat(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            assert(ns.SetEnabled('bags', true))
+            assert(ns.SetBagBinding('ALT-L'))
+            test.bindings['K'] = 'TOGGLEQUESTLOG'
+            ns.BeginBagBinding()
+            local dialog = DraxtilitiesBindingCapture
+            assert(not dialog.apply:IsEnabled())
+            assert(GetBindingAction('ALT-L', true) == '')
+            dialog.scripts.OnKeyDown(dialog, 'LSHIFT')
+            assert(not dialog.pendingKey)
+            dialog.scripts.OnKeyDown(dialog, 'K')
+            assert(ns.db.bagLockKey == 'ALT-L' and dialog.pendingKey == 'K')
+            assert(dialog.hint.text:find('TOGGLEQUESTLOG', 1, true))
+            dialog.apply.scripts.OnClick()
+            assert(ns.db.bagLockKey == 'K' and not dialog:IsShown() and not dialog.keyboard)
+            ns.BeginBagBinding()
+            dialog.scripts.OnKeyDown(dialog, 'M')
+            dialog.scripts.OnKeyDown(dialog, 'ESCAPE')
+            assert(ns.db.bagLockKey == 'K' and not dialog:IsShown())
+            ns.BeginBagBinding()
+            dialog.scripts.OnKeyDown(dialog, 'L')
+            test.combat = true
+            test.event('PLAYER_REGEN_DISABLED')
+            assert(not dialog:IsShown() and not dialog.pendingKey and not dialog.keyboard)
+            test.combat = false
+            test.event('PLAYER_REGEN_ENABLED')
+            assert(GetBindingAction('K', true):find('DraxtilitiesLockBinding', 1, true))
+            assert(ns.db.bagLockKey == 'K')
+            ns.BeginBagBinding()
+            assert(ns.SetEnabled('bags', false))
+            assert(not dialog:IsShown() and GetBindingAction('K', true) == 'TOGGLEQUESTLOG')
+        """)
+
+    def test_items_only_lists_saved_locks_with_search_and_unlock(self):
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            test.put(0, 1, 'Item-A', 100).link = '[Runed sword]'
+            test.put(0, 2, 'Item-B', 100).link = '[Unprotected sword]'
+            ns.db.locks['Item-A'] = { id = 100, link = '[Runed sword]', owner = 'Test-Realm' }
+            ns.db.locks['Item-Away'] = { id = 300, link = '[Old shield]', owner = 'Alt-Realm' }
+            test.buildPage('Items')
+            local rows = test.itemRows()
+            assert(#rows == 2 and #test.controls == 1)
+            assert(rows[1].name.text == '[Old shield]' and rows[2].name.text == '[Runed sword]')
+            assert(not test.findControl('Show') and not test.findControl('Sort by'))
+            test.typeSearch('  aLt-Realm  ')
+            test.buildPage('Items')
+            rows = test.itemRows()
+            assert(#rows == 1 and rows[1].entry.guid == 'Item-Away')
+            assert(rows[1].detail.text:find('Not in your bags', 1, true))
+            assert(rows[1].action:IsEnabled() and next(ns.active) == nil)
+            rows[1].action.scripts.OnClick()
+            assert(not ns.db.locks['Item-Away'] and ns.db.locks['Item-A'])
+            test.buildPage('Items')
+            assert(#test.itemRows() == 0 and test.hasText('No matching items.'))
+            test.typeSearch('100')
+            test.buildPage('Items')
+            assert(#test.itemRows() == 1)
+        """)
+
+    def test_item_tooltip_rechecks_location_and_falls_back_to_saved_item(self):
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            test.put(0, 1, 'Item-A')
+            ns.db.locks['Item-A'] = { id = 100, link = '[Original copy]' }
+            test.buildPage('Items')
+            local row = test.itemRows()[1]
+            GameTooltip:Hide()
+            if row.scripts.OnEnter then row.scripts.OnEnter(row) end
+            assert(not GameTooltip:IsShown(), 'hovering the row showed the item tooltip')
+            row.iconTarget.scripts.OnEnter(row.iconTarget)
+            assert(test.tooltip.bag == 0 and test.tooltip.slot == 1)
+            assert(GameTooltip.owner == row.iconTarget and GameTooltip.anchor == 'ANCHOR_CURSOR')
+            test.put(0, 1, 'Item-B', 200)
+            row.iconTarget.scripts.OnEnter(row.iconTarget)
+            assert(test.tooltip.link == '[Original copy]' and not test.tooltip.bag)
+            row.iconTarget.scripts.OnLeave(row.iconTarget)
+            assert(not GameTooltip:IsShown())
+            row.action.scripts.OnClick()
+            assert(not ns.db.locks['Item-A'] and test.items['0:1'].guid == 'Item-B')
+            ns.db.locks['Missing-link'] = { id = 300 }
+            test.buildPage('Items')
+            row = test.itemRows()[1]
+            row.iconTarget.scripts.OnEnter(row.iconTarget)
+            assert(test.tooltip.id == 300)
+            row:Hide()
+            assert(not GameTooltip:IsShown(), 'hiding the row left its icon tooltip visible')
+        """)
+
+    def test_locked_item_pagination_preserves_copies_and_reuses_rows(self):
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            for index = 1, 16 do
+                ns.db.locks[string.format('Item-%02d', index)] = { id = 100, link = '[Same item]' }
+            end
+            test.buildPage('Items')
+            local rows = test.itemRows()
+            assert(#rows == 12 and rows[1].entry.guid == 'Item-01' and rows[12].entry.guid == 'Item-12')
+            local frames = #test.frames
+            test.findControl('Next').onClick()
+            test.buildPage('Items')
+            rows = test.itemRows()
+            assert(#rows == 4 and rows[1].entry.guid == 'Item-13' and rows[4].entry.guid == 'Item-16')
+            assert(#test.frames == frames, 'list rebuilt frames instead of reusing its rows')
+            test.typeSearch('Item-01')
+            test.buildPage('Items')
+            rows = test.itemRows()
+            assert(#rows == 1 and rows[1].entry.guid == 'Item-01' and not test.findControl('Next'))
+            test.buildPage('Settings')
+            assert(#test.itemRows() == 0, 'item rows stayed visible on Settings')
+        """)
+
+    def test_options_prebuild_does_not_scan_inventory_or_create_item_rows(self):
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            ns.Inventory = function() error('inventory read during prebuild') end
+            test.buildPage('Items', true)
+            assert(test.findControl('Search locked items') and #test.itemRows() == 0)
+            assert(not DraxtilitiesBindingCapture and next(test.overrides) == nil)
+            test.buildPage('Settings', true)
+            assert(test.findControl('Enable Item Protection') and test.findControl('Lock or unlock bag items'))
+            assert(not DraxtilitiesBindingCapture and next(test.overrides) == nil)
+        """)
+
+    def test_inventory_refresh_waits_until_search_editing_finishes(self):
+        self.load("Modules/Bags.lua")
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            assert(ns.SetEnabled('bags', true))
+            EllesmereUI.IsShown = function() return true end
+            EllesmereUI.GetPluginModuleKey = function() return 'Protection' end
+            EllesmereUI.GetActiveModule = function() return 'Protection' end
+            local refreshed = 0
+            EllesmereUI.RefreshPage = function() refreshed = refreshed + 1 end
+            test.buildPage('Items')
+            test.searchBox():SetFocus()
+            test.event('BAG_UPDATE_DELAYED')
+            assert(refreshed == 0 and ns.optionsDirty)
+            test.searchBox():ClearFocus()
+            assert(refreshed == 1 and not ns.optionsDirty)
+            test.event('BAG_UPDATE_DELAYED')
+            assert(refreshed == 2)
+        """)
+
+    def test_one_skin_registration_covers_lazily_created_frames(self):
+        self.load("Modules/Bags.lua")
+        self.load("Options.lua")
+        self.run_lua("""
+            test.event('ADDON_LOADED', 'Draxtilities')
+            assert(test.skinRegistrations == 1)
+            local shells = 0
+            test.skinCallback({ Shell = function() shells = shells + 1 end,
+                Button = function() end, Font = function() end })
+            assert(ns.SetEnabled('bags', true))
+            ns.BeginBagBinding()
+            ns.CancelBagBinding()
+            ns.ToggleBagSelection()
+            assert(shells == 2 and test.skinRegistrations == 1)
+        """)
+
+    def test_live_search_preserves_focus_and_cursor_across_new_eui_wrappers(self):
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            ns.db.locks['Sword'] = { id = 100, link = '[Sword]' }
+            ns.db.locks['Shield'] = { id = 200, link = '[Shield]' }
+            test.buildPage('Items')
+            local box = test.searchBox()
+            local frames, refreshed = #test.frames, 0
+            EllesmereUI.IsShown = function() return true end
+            EllesmereUI.GetPluginModuleKey = function() return 'Protection' end
+            EllesmereUI.GetActiveModule = function() return 'Protection' end
+            EllesmereUI.RefreshPage = function()
+                refreshed = refreshed + 1
+                test.pageParent:Hide()
+                box:Hide()
+                test.pageParent = CreateFrame('Frame')
+                test.buildPage('Items')
+            end
+            test.typeSearch('S')
+            assert(#test.itemRows() == 2 and refreshed == 1)
+            test.typeSearch('Sw')
+            assert(#test.itemRows() == 1 and test.itemRows()[1].entry.guid == 'Sword')
+            test.typeSearch('Swo')
+            assert(refreshed == 3 and test.searchBox() == box and box:HasFocus() and box:GetCursorPosition() == 3)
+            test.typeSearch('Sw')
+            assert(refreshed == 4 and box:GetCursorPosition() == 2)
+            test.typeSearch('Sword', 2)
+            assert(refreshed == 5 and box:HasFocus() and box:GetCursorPosition() == 2)
+            test.typeSearch('')
+            assert(#test.itemRows() == 2 and refreshed == 6 and test.searchBox() == box)
+            assert(#test.frames == frames + 6, 'our search field or list rows were recreated on each keystroke')
+            box:SetText('programmatic update')
+            assert(refreshed == 6, 'programmatic text changes triggered recursive refreshes')
+        """)
+
+    def test_search_typing_appends_after_refresh_instead_of_replacing_selection(self):
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            ns.db.locks['Sword'] = { id = 100, link = '[Sword]' }
+            ns.db.locks['Shield'] = { id = 200, link = '[Shield]' }
+            test.buildPage('Items')
+            local box = test.searchBox()
+            EllesmereUI.IsShown = function() return true end
+            EllesmereUI.GetPluginModuleKey = function() return 'Protection' end
+            EllesmereUI.GetActiveModule = function() return 'Protection' end
+            EllesmereUI.RefreshPage = function()
+                test.pageParent:Hide()
+                box:Hide()
+                test.pageParent = CreateFrame('Frame')
+                test.buildPage('Items')
+            end
+            box:SetFocus()
+            test.insertSearch('S')
+            test.insertSearch('w')
+            test.insertSearch('o')
+            assert(box:GetText() == 'Swo', 'the next character replaced the text selected by the refresh')
+            assert(#test.itemRows() == 1 and test.itemRows()[1].entry.guid == 'Sword')
+            assert(box.selectionStart == box.selectionEnd and box:GetCursorPosition() == 3)
+            box:SetCursorPosition(1)
+            test.insertSearch('h')
+            assert(box:GetText() == 'Shwo' and box:GetCursorPosition() == 2)
+            box:HighlightText() -- deliberate Select All must still replace the query
+            test.insertSearch('Shield')
+            assert(box:GetText() == 'Shield' and test.itemRows()[1].entry.guid == 'Shield')
+            assert(box.selectionStart == box.selectionEnd)
+        """)
+
+    def test_bag_button_selection_movement_visibility_and_disable(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            test.put(0, 1, 'Item-A')
+            ns.db.bagButtonPosition = { point = 'TOP', relativePoint = 'TOP', x = 12, y = -90 }
+            assert(ns.SetEnabled('bags', true))
+            local parent = CreateFrame('Frame')
+            parent:SetID(0)
+            local target = CreateFrame('Button', nil, parent)
+            target:SetID(1)
+            test.paint(target, { bag = 0, slot = 1, info = { itemID = 100 } })
+            local bags = ns.active.bags
+            local button = bags.launcher
+            assert(button and button:IsShown())
+            local point, _, _, x, y = button:GetPoint()
+            assert(point == 'TOP' and x == 12 and y == -90)
+            button.scripts.OnClick(button, 'LeftButton')
+            assert(bags.mode and button.text == 'Finish selection')
+            button.scripts.OnClick(button, 'LeftButton')
+            assert(not bags.mode)
+            button.scripts.OnMouseDown(button)
+            button.scripts.OnDragStart(button)
+            button:SetPoint('CENTER', UIParent, 'CENTER', 80, 120)
+            button.scripts.OnDragStop(button)
+            button.scripts.OnClick(button, 'LeftButton')
+            assert(not bags.mode, 'dragging the button also entered lock selection')
+            assert(ns.db.bagButtonPosition.x == 80 and ns.db.bagButtonPosition.y == 120)
+            local opened
+            EllesmereUI.OpenPlugin = function(_, _, page) opened = page end
+            button.scripts.OnMouseDown(button)
+            button.scripts.OnClick(button, 'RightButton')
+            assert(opened == 'Items' and not bags.mode)
+            parent:Hide()
+            button.scripts.OnUpdate(button, 0.3)
+            assert(not button:IsShown())
+            parent:Show()
+            bags.Refresh()
+            assert(button:IsShown())
+            test.combat = true
+            test.event('PLAYER_REGEN_DISABLED')
+            assert(not button:IsShown())
+            test.combat = false
+            test.event('PLAYER_REGEN_ENABLED')
+            assert(button:IsShown() and not bags.mode)
+            assert(ns.SetEnabled('bags', false))
+            assert(not button:IsShown())
+        """)
+
+    def test_locked_bag_item_cancels_targeted_item_spells_without_acting(self):
+        self.load("Modules/Bags.lua")
+        self.run_lua("""
+            test.put(0, 1, 'Item-A')
+            ns.db.locks['Item-A'] = { id = 100 }
+            assert(ns.SetEnabled('bags', true))
+            local parent = CreateFrame('Frame')
+            parent:SetID(0)
+            local target = CreateFrame('Button', nil, parent)
+            target:SetID(1)
+            test.paint(target, { bag = 0, slot = 1, info = { itemID = 100 } })
+            local layer = ns.active.bags.layers[target]
+            test.spellTarget = true
+            layer.scripts.OnClick(layer, 'LeftButton')
+            assert(test.stoppedSpell == 1 and not test.spellTarget)
+            assert(test.items['0:1'].guid == 'Item-A' and ns.db.locks['Item-A'] and not test.cursor)
+            assert(test.messages[#test.messages]:find('This item is locked', 1, true))
+            test.spellTargetID = true
+            layer.scripts.OnClick(layer, 'LeftButton')
+            assert(test.stoppedSpell == 2 and not test.spellTargetID)
+            test.put(0, 1, 'Item-B', 200)
+            test.spellTarget = true
+            layer.scripts.OnClick(layer, 'LeftButton')
+            assert(test.stoppedSpell == 2 and test.items['0:1'].guid == 'Item-B')
+            assert(ns.db.locks['Item-A'] and not ns.db.locks['Item-B'])
         """)
 
 
