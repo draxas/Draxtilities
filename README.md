@@ -5,6 +5,13 @@ Puoi proteggere una copia di un oggetto e lasciare libere le altre, anche se
 sono identiche. I moduli aggiungono conferme per vendita, eliminazione, aste
 e riciclo nelle operazioni elencate sotto.
 
+L'interfaccia, i tooltip, le conferme e i messaggi in chat sono in italiano sui
+client WoW italiani (`itIT`) e in inglese sugli altri client. La lingua viene
+scelta automaticamente. I nomi inglesi delle opzioni usati in questa guida
+corrispondono alle rispettive traduzioni nel gioco: **Item Protection** diventa
+**Protezione oggetti**, **Settings** diventa **Impostazioni** e **Items** diventa
+**Oggetti**. I comandi `/dt` e `/draxtilities` restano invariati.
+
 ## Requisiti
 
 - World of Warcraft Retail.
@@ -152,7 +159,8 @@ Queste azioni restano escluse:
 Se usi i lucchetti, disabilita la vendita automatica in EUI e negli altri addon.
 Controlla la copia scelta prima di usare una delle azioni escluse.
 Con EUI bag controls attivo, lanciare Disenchant e poi fare clic su una copia
-protetta nelle borse annulla il puntamento e conserva il lucchetto. Lo stesso
+protetta nelle borse blocca quel clic e conserva il lucchetto. Il cursore della
+spell rimane attivo. Il messaggio indica soltanto che l'oggetto è bloccato. Lo stesso
 blocco vale per le altre spell puntate manualmente su una copia protetta.
 Per usarla come bersaglio, rimuovi prima il lucchetto. Questo controllo non
 intercetta EUI Quick Actions, macro o spell già applicate allo slot da altri addon.

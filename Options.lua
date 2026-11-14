@@ -1,15 +1,16 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 local query, page = "", 1
 local PAGE_SIZE = 12
 local itemRows = {}
 local searchBox, refreshingSearch
 local actions = {
-    { "bags", "EUI bag controls" },
-    { "cursor", "Dragged item sales and deletion" },
-    { "merchant", "Sell All Junk button" },
-    { "auctions", "Auction Post button" },
-    { "scrapping", "Scrap button" },
+    { "bags", L["EUI bag controls"] },
+    { "cursor", L["Dragged item sales and deletion"] },
+    { "merchant", L["Sell All Junk button"] },
+    { "auctions", L["Auction Post button"] },
+    { "scrapping", L["Scrap button"] },
 }
 
 local function CopyName(record)
@@ -56,7 +57,7 @@ local function CreateItemRow(parent)
     row.action = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
     row.action:SetSize(90, 26)
     row.action:SetPoint("RIGHT", -20, 0)
-    row.action:SetText("Unlock")
+    row.action:SetText(L["Unlock"])
     row.action:SetScript("OnClick", function()
         ns.Remove(row.entry.guid)
         ns.RefreshOptions()
@@ -114,7 +115,7 @@ local function BuildPage(pageName, parent, yOffset)
     local prebuild = EUI.IsSearchPrebuild()
     if not prebuild then
         for _, row in ipairs(itemRows) do row:Hide() end
-        if pageName ~= "Items" and searchBox then searchBox:Hide() end
+        if pageName ~= L["Items"] and searchBox then searchBox:Hide() end
     end
     local function Row(left, right)
         local _, height = W:DualRow(parent, y, left, right)
@@ -124,22 +125,22 @@ local function BuildPage(pageName, parent, yOffset)
     local function Disabled()
         return InCombatLockdown() or not ns.db.itemProtectionEnabled
     end
-    if pageName == "Settings" then
-        Row({ type = "toggle", text = "Enable Item Protection", noCapture = true,
-              tooltip = "Turn all selected protection actions on or off. Saved item locks and your action preferences are kept when disabled.",
+    if pageName == L["Settings"] then
+        Row({ type = "toggle", text = L["Enable Item Protection"], noCapture = true,
+              tooltip = L["Turn all selected protection actions on or off. Saved item locks and your action preferences are kept when disabled."],
               disabled = InCombatLockdown,
               getValue = function() return ns.db.itemProtectionEnabled end,
               setValue = ns.SetProtectionEnabled })
-        Row({ type = "button", text = "Lock or unlock bag items", width = 240,
+        Row({ type = "button", text = L["Lock or unlock bag items"], width = 240,
               disabled = function() return Disabled() or not ns.active.bags end,
-              tooltip = "Open your EUI bags, then click this button. Click items to add or remove their locks. Done or Esc finishes selection. Requires EUI bag controls.",
+              tooltip = L["Open your EUI bags, then click this button. Click items to add or remove their locks. Done or Esc finishes selection. Requires EUI bag controls."],
               onClick = ns.ToggleBagSelection },
-            { type = "labeledButton", text = "Selection shortcut", width = 140,
-              buttonText = ns.db.bagLockKey and GetBindingText(ns.db.bagLockKey) or "Set shortcut",
+            { type = "labeledButton", text = L["Selection shortcut"], width = 140,
+              buttonText = ns.db.bagLockKey and GetBindingText(ns.db.bagLockKey) or L["Set shortcut"],
               disabled = function() return Disabled() or not ns.active.bags end,
               onClick = ns.BeginBagBinding,
-              tooltip = "Choose a key for the same bag selection mode. It only works while EUI bag controls are enabled and out of combat." })
-        local _, height = W:SectionHeader(parent, "Actions", y)
+              tooltip = L["Choose a key for the same bag selection mode. It only works while EUI bag controls are enabled and out of combat."] })
+        local _, height = W:SectionHeader(parent, L["Actions"], y)
         y = y - height
         local controls = {}
         for _, action in ipairs(actions) do
@@ -157,9 +158,9 @@ local function BuildPage(pageName, parent, yOffset)
         for index = 1, #controls, 2 do
             Row(controls[index], controls[index + 1] or { type = "label", text = "" })
         end
-    elseif pageName == "Items" then
+    elseif pageName == L["Items"] then
         local searchY = y
-        Row({ type = "label", text = "Search locked items" })
+        Row({ type = "label", text = L["Search locked items"] })
         if prebuild then return math.abs(y) end
         if not searchBox then searchBox = CreateSearchBox(parent) end
         searchBox:SetParent(parent)
@@ -189,7 +190,7 @@ local function BuildPage(pageName, parent, yOffset)
         local last = math.max(1, math.ceil(#entries / PAGE_SIZE))
         page = math.max(1, math.min(page, last))
         if #entries == 0 then
-            Row({ type = "label", text = query == "" and "No locked items." or "No matching items." })
+            Row({ type = "label", text = query == "" and L["No locked items."] or L["No matching items."] })
         end
         for index = (page - 1) * PAGE_SIZE + 1, math.min(page * PAGE_SIZE, #entries) do
             local slot = index - (page - 1) * PAGE_SIZE
@@ -202,8 +203,8 @@ local function BuildPage(pageName, parent, yOffset)
             row:ClearAllPoints()
             row:SetPoint("TOPLEFT", parent, "TOPLEFT", 20, y)
             row:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -20, y)
-            row.name:SetText((item and item.link) or record.link or ("Item #" .. tostring(record.id)))
-            local position = item and ("Bag " .. item.bag .. ", slot " .. item.slot) or "Not in your bags"
+            row.name:SetText((item and item.link) or record.link or L["Item #%s"]:format(tostring(record.id)))
+            local position = item and L["Bag %d, slot %d"]:format(item.bag, item.slot) or L["Not in your bags"]
             row.detail:SetText(position .. (record.owner and ("  |  " .. record.owner) or "")
                 .. (not item and ("  |  " .. entry.guid:sub(-8)) or ""))
             row.icon:SetTexture(C_Item.GetItemIconByID(record.id) or "Interface\\Icons\\INV_Misc_QuestionMark")
@@ -212,9 +213,9 @@ local function BuildPage(pageName, parent, yOffset)
             y = y - 52
         end
         if last > 1 then
-            Row({ type = "button", text = "Previous", disabled = function() return page == 1 end,
+            Row({ type = "button", text = L["Previous"], disabled = function() return page == 1 end,
                   onClick = function() page = page - 1; Refresh() end },
-                { type = "button", text = "Next", disabled = function() return page == last end,
+                { type = "button", text = L["Next"], disabled = function() return page == last end,
                   onClick = function() page = page + 1; Refresh() end })
         end
     end
@@ -223,14 +224,14 @@ end
 
 function ns.RegisterOptions()
     if not EllesmereUI.RegisterPlugin then
-        ns.Print("This EllesmereUI version does not provide the public Plugin API. Update the original addon.")
+        ns.Print(L["This EllesmereUI version does not provide the public Plugin API. Update the original addon."])
         return false
     end
     return EllesmereUI.RegisterPlugin(ns.id, {
         label = "Draxtilities",
-        modules = {{ key = "Protection", title = "Item Protection",
-            description = "Confirm before selling, deleting, auctioning or scrapping locked items.",
-            pages = { "Settings", "Items" }, buildPage = BuildPage,
+        modules = {{ key = "Protection", title = L["Item Protection"],
+            description = L["Confirm before selling, deleting, auctioning or scrapping locked items."],
+            pages = { L["Settings"], L["Items"] }, buildPage = BuildPage,
             onPageCacheRestore = function() ns.RefreshOptions() end }},
     })
 end

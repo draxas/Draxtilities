@@ -1,5 +1,6 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 local removals = {}
 ns.loading = {}
 
@@ -61,10 +62,10 @@ function ns.Toggle(bag, slot)
         if not maxStack then
             ns.loading[item.id] = true
             C_Item.RequestLoadItemDataByID(item.id)
-            ns.Print("Item data is loading. Try again.")
+            ns.Print(L["Item data is loading. Try again."])
             return false
         end
-        if maxStack ~= 1 then ns.Print("Only items that cannot stack can be protected."); return false end
+        if maxStack ~= 1 then ns.Print(L["Only items that cannot stack can be protected."]); return false end
         ns.db.locks[item.guid] = { id = item.id, link = item.link, owner = GetUnitName("player", true) }
     end
     ns.Cancel()

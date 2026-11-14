@@ -1,14 +1,15 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 
 function ns.Stale()
-    ns.Print("The item or action changed. Try again.")
+    ns.Print(L["The item or action changed. Try again."])
 end
 
 function ns.Request(title, items, validate, execute, trackRemoval, dismiss, disclaimer)
     if InCombatLockdown() or not next(ns.active) then return false end
     local cursor = ns.active.cursor
-    if cursor and cursor.IsTyping() then ns.Print("Finish the native deletion dialog first."); return false end
+    if cursor and cursor.IsTyping() then ns.Print(L["Finish the native deletion dialog first."]); return false end
     ns.CancelRequest()
     local request = { dismiss = dismiss }
     local names, protected = {}, {}
@@ -17,7 +18,7 @@ function ns.Request(title, items, validate, execute, trackRemoval, dismiss, disc
             protected[item.guid] = true
             if #names < 6 then
                 names[#names + 1] = (item.link or ("#" .. item.id))
-                    .. " (bag " .. tostring(item.bag) .. ", slot " .. tostring(item.slot) .. ")"
+                    .. L[" (bag %s, slot %s)"]:format(tostring(item.bag), tostring(item.slot))
             end
         end
     end
@@ -31,9 +32,9 @@ function ns.Request(title, items, validate, execute, trackRemoval, dismiss, disc
     end
     request.handle = EllesmereUI:ShowConfirmPopup({
         title = title,
-        message = "This action affects protected copies.\n\n" .. table.concat(names, "\n"),
-        disclaimer = disclaimer or "This confirmation applies only to this action. Surviving copies keep their locks.",
-        confirmText = "Continue", cancelText = "Cancel",
+        message = L["This action affects protected copies."] .. "\n\n" .. table.concat(names, "\n"),
+        disclaimer = disclaimer or L["This confirmation applies only to this action. Surviving copies keep their locks."],
+        confirmText = L["Continue"], cancelText = L["Cancel"],
         onCancel = Cancel, onDismiss = Cancel,
         onConfirm = function()
             if ns.pending ~= request then return end

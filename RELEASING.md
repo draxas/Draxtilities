@@ -48,6 +48,9 @@ Per le prove di vendita, eliminazione e riciclo usa oggetti che puoi perdere.
 6. Per Sell All Junk, Post e riciclo, verifica la sequenza pulsante → conferma
    EUI → pulsante. Cambia copia, selezione, prezzo o quantità dopo la conferma:
    l'operazione modificata deve richiederne un'altra.
+   Cambia scheda o nascondi il pulsante senza modificare l'inventario: l'overlay
+   deve sparire e ricomparire con il pulsante. Dopo la chiusura, anche a finestra
+   riaperta, una vecchia conferma o autorizzazione non deve più essere valida.
 7. Entra in combattimento durante una conferma o dopo averla accettata.
    Controlla che le protezioni vengano sospese e che all'uscita non parta alcuna
    azione. Fuori dal combattimento, disabilita Item Protection e verifica che i pulsanti
@@ -82,9 +85,22 @@ Per le prove di vendita, eliminazione e riciclo usa oggetti che puoi perdere.
     Verifica chiusura, riapertura, reload, combattimento e disattivazione:
     la selezione non deve riattivarsi da sola. Nessun file EUI va modificato.
 13. Lancia Disenchant e fai clic su una copia protetta nelle borse EUI: il
-    puntamento deve essere annullato, l'oggetto e il lock conservati. Ripeti con
-    la copia spostata dopo il disegno dello slot. Non dichiarare coperti i clic
+    clic deve essere bloccato senza popup di azione protetta, conservando oggetto
+    e lock. Il puntamento deve rimanere attivo e l'avviso deve essere soltanto
+    "This item is locked." ("Questo oggetto è bloccato." su itIT).
+    Ripeti il clic, poi con la copia spostata dopo il disegno dello slot,
+    e verifica che non siano accodate azioni. Non dichiarare coperti i clic
     sulle Quick Actions EUI o le macro che applicano la spell direttamente allo slot.
+14. Su client italiano, verifica Protezione oggetti, Impostazioni e Oggetti,
+    incluse le etichette indicizzate dalla ricerca globale EUI, le descrizioni,
+    i tooltip, i pulsanti della selezione e la finestra del bind. Controlla che
+    il testo non sia tagliato o sovrapposto a scala e larghezza ridotte.
+    Prova `/dt`, `/dt items`, il clic destro sul lucchetto delle borse, ricerca
+    live, paginazione e Sblocca anche per una copia assente. Le conferme e i
+    messaggi devono essere tradotti, compresi i numeri di borsa e scomparto;
+    i dialoghi nativi devono conservare le istruzioni localizzate di Blizzard.
+    Ripeti l'apertura delle pagine su un client inglese: testo e comandi devono
+    restare quelli precedenti, con gli stessi lucchetti e preferenze salvati.
 
 Riporta nel riepilogo della modifica quali prove sono state eseguite.
 

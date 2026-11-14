@@ -1,14 +1,16 @@
 ## Interface: 120100, 120105
 ## Title: Draxtilities
 ## Notes: Item locks and confirmations for EllesmereUI.
+## Notes-itIT: Lucchetti e conferme per gli oggetti in EllesmereUI.
 ## Author: Gianmarco
-## Version: 0.1.2
+## Version: 0.1.3
 ## X-Website: https://github.com/draxas/Draxtilities
 ## X-License: MIT
 ## Dependencies: EllesmereUI
 ## OptionalDeps: EllesmereUIBags
 ## SavedVariables: DraxtilitiesDB
 
+Locale.lua
 Core.lua
 Store.lua
 Bindings.lua

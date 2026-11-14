@@ -1,9 +1,12 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 
 function ns.CreatePanelGuard(spec)
     local G = {}
-    local button, permission, boundTarget, removalTicket
+    local button, permission, boundTarget, removalTicket, request
+    local watcher = CreateFrame("Frame", nil, UIParent)
+    watcher:Hide()
     local function Disarm()
         if button and not InCombatLockdown() then
             button:SetAttribute("type", nil)
@@ -12,13 +15,18 @@ function ns.CreatePanelGuard(spec)
     end
     function G.Cancel()
         permission = nil
+        local pending = request
+        request = nil
+        if pending and ns.pending == pending then ns.CancelRequest() end
         if removalTicket then ns.CancelRemovals(removalTicket); removalTicket = nil end
     end
     function G.Refresh()
         if InCombatLockdown() then return end
+        watcher:SetShown(G.running == true)
         local target = spec.Target()
         if not target or not target:IsVisible() then
             G.Cancel()
+            boundTarget = target
             if button then button:Hide(); UnregisterStateDriver(button, "visibility"); Disarm() end
             return
         end
@@ -30,7 +38,7 @@ function ns.CreatePanelGuard(spec)
             button:SetScript("OnEnter", function(self)
                 local live = spec.Target()
                 if not live or not live:IsVisible() then G.Refresh(); return end
-                EllesmereUI.ShowWidgetTooltip(self, "Draxtilities checks protected copies before this action.")
+                EllesmereUI.ShowWidgetTooltip(self, L["Draxtilities checks protected copies before this action."])
             end)
             button:SetScript("OnLeave", function() EllesmereUI.HideWidgetTooltip() end)
             button:SetScript("PreClick", function(_, mouseButton)
@@ -45,7 +53,7 @@ function ns.CreatePanelGuard(spec)
                 if live ~= boundTarget or not live:IsVisible() or not live:IsEnabled() then permission = nil; return end
                 if live:HasAccessConstraints() or live:HasAnyForbiddenAspects(Enum.ForbiddenAspect.ScriptedInput) then
                     permission = nil
-                    ns.Print("The native control does not permit delegated input.")
+                    ns.Print(L["The native control does not permit delegated input."])
                     return
                 end
                 local items, signature, reason = spec.Collect()
@@ -54,15 +62,17 @@ function ns.CreatePanelGuard(spec)
                 for _, item in ipairs(items) do if ns.IsLocked(item) then protected = true; break end end
                 if protected and permission ~= signature then
                     permission = nil
-                    ns.Request(spec.title, items, function()
+                    local started = ns.Request(spec.title, items, function()
                         local _, now, invalid = spec.Collect()
                         return spec.Target() == live and live:IsVisible() and live:IsEnabled()
                             and not invalid and now == signature
                     end, function()
+                        request = nil
                         permission = signature
-                        ns.Print("Authorized once. Click the native action button again to finish.")
-                    end, false, nil,
-                        "After confirming, click the original action button again. Any changed item or action needs a new confirmation.")
+                        ns.Print(L["Authorized once. Click the native action button again to finish."])
+                    end, false, function() request = nil end,
+                        L["After confirming, click the original action button again. Any changed item or action needs a new confirmation."])
+                    if started then request = ns.pending end
                     return
                 end
                 permission = nil
@@ -92,6 +102,7 @@ function ns.CreatePanelGuard(spec)
     function G.Suspend() G.Cancel() end
     function G.Stop()
         G.Cancel()
+        watcher:Hide()
         if button then
             button:Hide()
             UnregisterStateDriver(button, "visibility")
@@ -99,5 +110,16 @@ function ns.CreatePanelGuard(spec)
             button:ClearAllPoints()
         end
     end
+    -- Native tabs can hide or restore their action button without a bag or
+    -- panel event. Observe visibility from our own frame, without hooks.
+    watcher:SetScript("OnUpdate", function(self, elapsed)
+        self.elapsed = (self.elapsed or 0) + elapsed
+        if self.elapsed < 0.2 then return end
+        self.elapsed = 0
+        if not G.running or InCombatLockdown() then return end
+        local target = spec.Target()
+        local visible = target ~= nil and target:IsVisible()
+        if target ~= boundTarget or visible ~= (button ~= nil and button:IsShown()) then G.Refresh() end
+    end)
     return G
 end

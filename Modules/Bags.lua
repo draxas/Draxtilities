@@ -1,5 +1,6 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 local controller
 
 local function CreateLockIcon(parent)
@@ -55,13 +56,13 @@ local function FooterButtonOffset(bagFrame)
 end
 
 ns.Register("bags", {
-    title = "EUI bag controls",
-    description = "Lock icons, item selection, right-click sale confirmation and blocking of item spells targeted by clicking a locked item in EUI bags, including Disenchant. Requires EllesmereUIBags. EUI Quick Actions and macros are excluded.",
+    title = L["EUI bag controls"],
+    description = L["Lock icons, item selection, right-click sale confirmation and blocking of item spells targeted by clicking a locked item in EUI bags, including Disenchant. Requires EllesmereUIBags. EUI Quick Actions and macros are excluded."],
     events = { "MERCHANT_SHOW", "MERCHANT_CLOSED", "BAG_CLOSED" },
     Start = function()
         if not EUI_Bags or type(EUI_Bags.RegisterItemOverlayIcon) ~= "function"
             or type(EUI_Bags.UnregisterItemOverlayIcon) ~= "function" then
-            return nil, "The public EUI Bags overlay API is unavailable. Enable the original EllesmereUIBags addon."
+            return nil, L["The public EUI Bags overlay API is unavailable. Enable the original EllesmereUIBags addon."]
         end
         if controller then
             EUI_Bags.RegisterItemOverlayIcon("Draxtilities", controller.Paint)
@@ -104,12 +105,12 @@ ns.Register("bags", {
                     if not self.fits or not self:IsVisible() or not B.running or InCombatLockdown() then return end
                     if mouseButton == "RightButton" then
                         B.SetMode(false)
-                        EllesmereUI.OpenPlugin(ns.id, "Protection", "Items")
+                        EllesmereUI.OpenPlugin(ns.id, "Protection", L["Items"])
                     else B.SetMode(not B.mode) end
                 end)
                 button:SetScript("OnEnter", function(self)
-                    local action = B.mode and "Finish selecting item locks." or "Click to lock or unlock bag items."
-                    EllesmereUI.ShowWidgetTooltip(self, "Draxtilities\n" .. action .. "\nRight-click for locked items.")
+                    local action = B.mode and L["Finish selecting item locks."] or L["Click to lock or unlock bag items."]
+                    EllesmereUI.ShowWidgetTooltip(self, "Draxtilities\n" .. action .. "\n" .. L["Right-click for locked items."])
                 end)
                 button:SetScript("OnLeave", EllesmereUI.HideWidgetTooltip)
                 button:SetScript("OnShow", B.LayoutLauncher)
@@ -161,13 +162,14 @@ ns.Register("bags", {
             end
             if not ns.IsLocked(item) then return end
             if SpellCanTargetItem() or SpellCanTargetItemID() then
-                SpellStopTargeting()
-                ns.Print("This item is locked. Unlock it before disenchanting or casting an item spell on it.")
+                -- Consume the click without forwarding it to the item button.
+                -- Cancelling targeting is protected; leave it under player control.
+                ns.Print(L["This item is locked."])
             elseif IsModifiedClick() then
                 HandleModifiedItemClick(item.link, item.location)
             elseif button == "RightButton" then
                 if not MerchantFrame or not MerchantFrame:IsVisible() or MerchantFrame.selectedTab ~= 1 then return end
-                ns.Request("Sell a protected item", { item }, function()
+                ns.Request(L["Sell a protected item"], { item }, function()
                     return B.running and MerchantFrame:IsVisible() and MerchantFrame.selectedTab == 1
                         and not GetCursorInfo() and not SpellCanTargetItem() and not SpellCanTargetItemID()
                 end, function() C_Container.UseContainerItem(item.bag, item.slot) end)
@@ -261,7 +263,7 @@ ns.Register("bags", {
             B.mode = on and true or false
             if B.mode and not B.bar then
                 local bar = CreateFrame("Frame", "DraxtilitiesSelection", UIParent)
-                bar:SetSize(350, 70)
+                bar:SetSize(350, 90)
                 bar:SetPoint("CENTER", UIParent, "CENTER", 0, 180)
                 bar:SetFrameStrata("DIALOG")
                 bar:EnableMouse(true)
@@ -270,15 +272,17 @@ ns.Register("bags", {
                 bar:SetScript("OnDragStart", bar.StartMoving)
                 bar:SetScript("OnDragStop", bar.StopMovingOrSizing)
                 local label = bar:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-                label:SetPoint("TOP", 0, -12)
-                label:SetText("Click items to lock or unlock. Esc to finish.")
+                label:SetPoint("TOPLEFT", 15, -12)
+                label:SetPoint("TOPRIGHT", -15, -12)
+                label:SetWordWrap(true)
+                label:SetText(L["Click items to lock or unlock. Esc to finish."])
                 local stop = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
-                stop:SetSize(100, 22); stop:SetPoint("BOTTOMLEFT", 15, 10); stop:SetText("Done")
+                stop:SetSize(100, 22); stop:SetPoint("BOTTOMLEFT", 15, 10); stop:SetText(L["Done"])
                 stop:SetScript("OnClick", function() B.SetMode(false) end)
                 local manage = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
-                manage:SetSize(160, 22); manage:SetPoint("BOTTOMRIGHT", -15, 10); manage:SetText("Locked items")
+                manage:SetSize(160, 22); manage:SetPoint("BOTTOMRIGHT", -15, 10); manage:SetText(L["Locked items"])
                 manage:SetScript("OnClick", function()
-                    B.SetMode(false); EllesmereUI.OpenPlugin(ns.id, "Protection", "Items")
+                    B.SetMode(false); EllesmereUI.OpenPlugin(ns.id, "Protection", L["Items"])
                 end)
                 bar:SetScript("OnHide", function() B.mode = false; B.Refresh() end)
                 UISpecialFrames[#UISpecialFrames + 1] = "DraxtilitiesSelection"
@@ -289,7 +293,7 @@ ns.Register("bags", {
             end
             if B.bar then B.bar:SetShown(B.mode) end
             B.Refresh()
-            if B.mode and not next(B.layers) then ns.Print("Open or reopen your EUI bags once to attach the item controls.") end
+            if B.mode and not next(B.layers) then ns.Print(L["Open or reopen your EUI bags once to attach the item controls."]) end
         end
         function B.Event(event)
             if event == "MERCHANT_SHOW" or event == "BAG_CLOSED" then B.SetMode(false) end

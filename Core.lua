@@ -1,5 +1,6 @@
 if EUI_CLIENT_BLOCKED then return end
 local addon, ns = ...
+local L = ns.L
 Draxtilities = ns
 ns.id, ns.modules, ns.order, ns.active = addon, {}, {}, {}
 local loader = CreateFrame("Frame")
@@ -16,7 +17,7 @@ function ns.ToggleBagSelection()
     if InCombatLockdown() then return end
     local bags = ns.active.bags
     if bags then bags.SetMode(not bags.mode)
-    else ns.Print("Enable Item Protection and EUI bag controls in Settings first.") end
+    else ns.Print(L["Enable Item Protection and EUI bag controls in Settings first."]) end
 end
 
 function ns.Print(message)
@@ -80,17 +81,17 @@ local function SyncEvents()
 end
 
 function ns.SetEnabled(key, enabled, preservePreference)
-    if InCombatLockdown() then ns.Print("Change protection settings out of combat."); return false end
+    if InCombatLockdown() then ns.Print(L["Change protection settings out of combat."]); return false end
     local spec = ns.modules[key]
     if not spec then return false end
     if enabled and EllesmereUI.ItemProtection then
-        ns.Print("Disable the old integrated Item Protection and install the original EllesmereUI first.")
+        ns.Print(L["Disable the old integrated Item Protection and install the original EllesmereUI first."])
         return false
     end
     ns.Cancel()
     if enabled and not ns.active[key] then
         local controller, reason = spec.Start()
-        if not controller then ns.Print(reason or "This module is unavailable."); return false end
+        if not controller then ns.Print(reason or L["This module is unavailable."]); return false end
         controller.running = true
         ns.active[key] = controller
     elseif not enabled and ns.active[key] then
@@ -108,7 +109,7 @@ end
 function ns.SetProtectionEnabled(enabled)
     if InCombatLockdown() then return false end
     if enabled and EllesmereUI.ItemProtection then
-        ns.Print("Disable the old integrated Item Protection and install the original EllesmereUI first.")
+        ns.Print(L["Disable the old integrated Item Protection and install the original EllesmereUI first."])
         return false
     end
     ns.Cancel()
@@ -200,7 +201,7 @@ SlashCmdList.DRAXTILITIES = function(text)
         if item and item.bag and ns.Toggle(item.bag, item.slot) then ClearCursor() end
     else
         if EllesmereUI.OpenPlugin then
-            EllesmereUI.OpenPlugin(ns.id, "Protection", text == "items" and "Items" or "Settings")
-        else ns.Print("Update EllesmereUI to a version with the public Plugin API.") end
+            EllesmereUI.OpenPlugin(ns.id, "Protection", text == "items" and L["Items"] or L["Settings"])
+        else ns.Print(L["Update EllesmereUI to a version with the public Plugin API."]) end
     end
 end

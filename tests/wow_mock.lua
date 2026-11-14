@@ -3,6 +3,7 @@ test = { frames = {}, items = {}, combat = false, popups = {}, messages = {}, ti
 Enum = { BagIndex = { ReagentBag = 5 }, ItemQuality = { Poor = 0, Rare = 3, Heirloom = 7 },
     ForbiddenAspect = { ScriptedInput = 1 } }
 function InCombatLockdown() return test.combat end
+function GetLocale() return test.locale or "enUS" end
 function GetUnitName() return "Test-Realm" end
 function issecretvalue(value) return type(value) == "table" and value.secret == true end
 function wipe(value) for key in pairs(value) do value[key] = nil end; return value end
@@ -15,8 +16,7 @@ function UnitExists() return false end
 function SpellCanTargetItem() return test.spellTarget == true end
 function SpellCanTargetItemID() return test.spellTargetID == true end
 function SpellStopTargeting()
-    test.stoppedSpell = (test.stoppedSpell or 0) + 1
-    test.spellTarget, test.spellTargetID = false, false
+    error("SpellStopTargeting is protected and cannot be called from an addon Lua handler")
 end
 function IsModifiedClick() return false end
 function HandleModifiedItemClick() end
@@ -128,6 +128,12 @@ end
 function test.event(event, ...)
     for _, frame in ipairs(test.frames) do
         if frame.events[event] and frame.scripts.OnEvent then frame.scripts.OnEvent(frame, event, ...) end
+    end
+end
+function test.update(elapsed)
+    local frames = { unpack(test.frames) }
+    for _, frame in ipairs(frames) do
+        if frame:IsVisible() and frame.scripts.OnUpdate then frame.scripts.OnUpdate(frame, elapsed) end
     end
 end
 function test.click(frame)

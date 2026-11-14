@@ -1,5 +1,6 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 local target = CreateFrame("Button", "DraxtilitiesLockBinding", UIParent)
 target:RegisterForClicks("AnyUp")
 target:SetScript("OnClick", function()
@@ -46,7 +47,7 @@ function ns.BeginBagBinding()
         background:SetColorTexture(0.06, 0.06, 0.06, 1)
         local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         title:SetPoint("TOP", 0, -14)
-        title:SetText("Bag item selection shortcut")
+        title:SetText(L["Bag item selection shortcut"])
         local hint = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         hint:SetPoint("TOPLEFT", 16, -42)
         hint:SetPoint("TOPRIGHT", -16, -42)
@@ -54,7 +55,7 @@ function ns.BeginBagBinding()
         local apply = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
         apply:SetSize(115, 24)
         apply:SetPoint("BOTTOMLEFT", 20, 16)
-        apply:SetText("Save shortcut")
+        apply:SetText(L["Save shortcut"])
         apply:SetScript("OnClick", function()
             local key = frame.pendingKey
             if key and ns.SetBagBinding(key) then frame:Hide() end
@@ -62,12 +63,12 @@ function ns.BeginBagBinding()
         local cancel = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
         cancel:SetSize(115, 24)
         cancel:SetPoint("BOTTOMRIGHT", -20, 16)
-        cancel:SetText("Cancel")
+        cancel:SetText(L["Cancel"])
         cancel:SetScript("OnClick", function() frame:Hide() end)
         local clear = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
         clear:SetSize(115, 24)
         clear:SetPoint("BOTTOM", 0, 16)
-        clear:SetText("Clear shortcut")
+        clear:SetText(L["Clear shortcut"])
         clear:SetScript("OnClick", function()
             if ns.SetBagBinding(nil) then frame:Hide() end
         end)
@@ -79,10 +80,10 @@ function ns.BeginBagBinding()
             local chord = CreateKeyChordStringUsingMetaKeyState(key)
             self.pendingKey = chord
             local action = GetBindingAction(chord, true)
-            local assignment = action and action ~= "" and ("Currently assigned to: " .. GetBindingName(action))
-                or "Not currently assigned."
+            local assignment = action and action ~= "" and L["Currently assigned to: %s"]:format(GetBindingName(action))
+                or L["Not currently assigned."]
             hint:SetText(GetBindingText(chord) .. "\n" .. assignment
-                .. "\nActive while EUI bag controls are enabled.")
+                .. "\n" .. L["Active while EUI bag controls are enabled."])
             apply:Enable()
         end)
         frame:SetScript("OnHide", function(self)
@@ -98,7 +99,7 @@ function ns.BeginBagBinding()
         capture = frame
     end
     capture.pendingKey = nil
-    capture.hint:SetText("Press a key combination, then save it.\nEsc cancels without changing your shortcut.")
+    capture.hint:SetText(L["Press a key combination, then save it.\nEsc cancels without changing your shortcut."])
     capture.apply:Disable()
     capture.clear:SetShown(ns.db.bagLockKey ~= nil)
     capture:Show()

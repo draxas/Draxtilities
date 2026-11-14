@@ -16,6 +16,7 @@ Documenta nel repository le scelte necessarie a chi modifica il codice.
 | File | Responsabilità |
 |---|---|
 | `Draxtilities.toc` | Metadati, dipendenze, SavedVariables e ordine di caricamento. |
+| `Locale.lua` | Testi UI inglesi con traduzione italiana per il client itIT; caricato prima di Core. |
 | `Core.lua` | Namespace `ns`, attivazione di Item Protection e dei suoi controller, eventi, cancellazione e comandi. |
 | `Store.lua` | Archivio dei lucchetti per GUID, lettura delle copie, inventario e verifica delle rimozioni osservate. |
 | `Bindings.lua` | Cattura del bind di selezione e override temporaneo, rilasciato quando i controlli delle borse sono spenti. |
@@ -65,6 +66,9 @@ aggiunte all'elenco delle azioni di Item Protection.
 - Per i tre controller dei pulsanti nativi, la conferma concede un permesso monouso:
   l'azione viene eseguita alla successiva pressione del pulsante nativo, dopo
   una nuova verifica. Senza copie protette l'azione procede direttamente.
+  Un frame proprio controlla anche i cambi di visibilità privi di eventi:
+  nascondere o sostituire il pulsante invalida il permesso e la sola conferma
+  di quel controller. Non lasciare overlay su pulsanti nativi nascosti.
 - Non cancellare automaticamente un lock perché la copia non è nelle borse:
   potrebbe essere equipaggiata, in banca, sul cursore o su un altro personaggio.
   La pulizia automatica riguarda solo eliminazioni e ricicli osservati e viene
@@ -92,7 +96,7 @@ Preserva i controlli sui valori segreti quando leggi gli identificativi Blizzard
 Lock or unlock bag items è disponibile in Settings e sul lucchetto nella
 fascia inferiore della bag. Per esplicita richiesta dell'utente, l'adattatore
 legge i frame con nome `EUI_MainBagFrame` e `EUI_BagMoneyFrame`, verificati
-nei sorgenti EUI 9.7.8: non è un'API di registrazione dei pulsanti.
+nei sorgenti EUI 9.7.8 e ricontrollati nella 9.8.4: non è un'API di registrazione dei pulsanti.
 Il pulsante è un frame proprio figlio di EUI_MainBagFrame. Eredita movimento,
 scala e visibilità; non agganciare script o funzioni EUI per seguirli e non
 modificare ancoraggi, dimensioni, script, campi o SavedVariables di EUI.
@@ -130,10 +134,17 @@ In Settings, completa una riga dispari con una cella label vuota per conservare
 le due colonne di DualRow: omettere la cella destra allarga quella sinistra.
 
 Il clic su una copia protetta con SpellCanTargetItem / SpellCanTargetItemID
-attivo blocca il puntamento con SpellStopTargeting, incluso Disenchant. Non
-eseguire la spell dopo una conferma o in seguito all'uscita dal combattimento.
+attivo viene consumato senza inoltrarlo al pulsante dell'oggetto, incluso per
+Disenchant. Non chiamare SpellStopTargeting dall'handler Lua: è una funzione
+protetta e provoca il blocco Blizzard anche fuori combattimento. Il puntamento
+rimane attivo e sotto il controllo del giocatore. Il messaggio deve essere
+soltanto "This item is locked." ("Questo oggetto è bloccato." in italiano),
+senza istruzioni sui tasti o sullo sblocco.
+Non eseguire la spell dopo una conferma o in seguito all'uscita dal combattimento.
 Il controllo riguarda quel clic nelle borse: EUI Quick Actions usa un pulsante
 secure separato e rimane escluso, come le macro che applicano la spell allo slot.
+Il mock rifiuta le chiamate a SpellStopTargeting per intercettare questa
+regressione; non simula comunque l'intero sistema di esecuzione protetta.
 
 I contratti delle API esterne sono nel pacchetto ufficiale di EllesmereUI:
 
@@ -149,8 +160,15 @@ l'esistenza di un'API dal solo nome e non aggiungere sorgenti EUI al pacchetto.
 ## Convenzioni e verifiche
 
 Segui `.editorconfig` e `.gitattributes`: UTF-8, LF e quattro spazi per il codice.
-Mantieni identificatori e testi UI nello stile inglese esistente; la documentazione
-del progetto è in italiano. Limita le nuove variabili globali e usa il namespace.
+Mantieni gli identificatori in inglese; la documentazione del progetto è in italiano.
+Tutte le stringhe mostrate in gioco usano `ns.L`, con il testo inglese completo
+come chiave e fallback. Aggiungi la traduzione italiana in `Locale.lua`: la lingua
+segue `GetLocale()` (`itIT` per l'italiano, inglese per gli altri client).
+Usa stringhe con segnaposto per i messaggi variabili, senza tradurre frammenti
+di frase. Le pagine registrate nel plugin e quelle passate a `OpenPlugin` devono
+usare gli stessi nomi localizzati; mantieni invariati chiavi dei moduli, comandi,
+SavedVariables e nomi dei frame. I nomi degli oggetti e i dialoghi nativi restano
+gestiti dalle API Blizzard. Limita le nuove variabili globali e usa il namespace.
 Rispetta le maiuscole dei percorsi: il packaging gira su Linux.
 
 Dalla root, con Python 3.9 o successivo:

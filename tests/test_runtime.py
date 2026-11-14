@@ -1,6 +1,7 @@
 """Lua 5.1 regression checks with API doubles; no WoW client or taint simulation."""
 
 from pathlib import Path
+import re
 import unittest
 
 from lupa.lua51 import LuaRuntime
@@ -11,11 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class RuntimeTests(unittest.TestCase):
     def setUp(self):
+        self.initialize_runtime()
+
+    def initialize_runtime(self, locale="enUS"):
         self.lua = LuaRuntime()
         self.lua.execute((ROOT / "tests/wow_mock.lua").read_text(encoding="utf-8"))
+        self.lua.globals().test.locale = locale
         self.ns = self.lua.table()
         self.lua.globals().ns = self.ns
-        for name in ("Core.lua", "Store.lua", "Bindings.lua", "Confirm.lua", "PanelGuard.lua", "TypedDelete.lua"):
+        for name in ("Locale.lua", "Core.lua", "Store.lua", "Bindings.lua", "Confirm.lua", "PanelGuard.lua", "TypedDelete.lua"):
             self.load(name)
         self.lua.execute("ns.InitStore()")
 
@@ -30,6 +35,111 @@ class RuntimeTests(unittest.TestCase):
         for path in files:
             with self.subTest(file=path.name):
                 self.lua.compile(path.read_text(encoding="utf-8-sig"), name="@" + path.name)
+
+    def test_italian_catalog_covers_runtime_text_and_format_arguments(self):
+        self.initialize_runtime("itIT")
+        rawget = self.lua.eval("rawget")
+        for entry in (ROOT / "Draxtilities.toc").read_text(encoding="utf-8").splitlines():
+            if not entry.endswith(".lua") or entry == "Locale.lua":
+                continue
+            source = (ROOT / entry).read_text(encoding="utf-8")
+            for literal in re.findall(r'L\[("(?:[^"\\]|\\.)*")\]', source):
+                key = self.lua.execute("return " + literal)
+                with self.subTest(file=entry, text=key):
+                    translation = rawget(self.ns.L, key)
+                    self.assertIsInstance(translation, str, "Missing Italian translation")
+                    self.assertTrue(translation)
+                    self.assertEqual(re.findall(r"%[sd]", key), re.findall(r"%[sd]", translation))
+
+    def test_italian_ui_navigation_confirmations_and_locked_spell_message(self):
+        self.initialize_runtime("itIT")
+        for name in ("Bags", "Cursor", "Merchant", "Auctions", "Scrapping"):
+            self.load(f"Modules/{name}.lua")
+        self.load("Options.lua")
+        self.run_lua("""
+            test.event('ADDON_LOADED', 'Draxtilities')
+            local module = test.plugin.modules[1]
+            assert(module.key == 'Protection' and module.title == 'Protezione oggetti')
+            assert(module.pages[1] == 'Impostazioni' and module.pages[2] == 'Oggetti')
+            test.buildPage('Impostazioni', true)
+            assert(test.findControl('Controlli borse EUI').disabled())
+            test.buildPage('Impostazioni')
+            test.findControl('Attiva protezione oggetti').setValue(true)
+            assert(ns.active.bags and ns.active.cursor and ns.db.modules.bags)
+            assert(ns.modules.bags.description:find('Disincantamento', 1, true))
+
+            local opened
+            EllesmereUI.OpenPlugin = function(id, key, page)
+                assert(id == 'Draxtilities' and key == 'Protection')
+                opened = page
+                assert(page == 'Oggetti' or page == 'Impostazioni')
+            end
+            SlashCmdList.DRAXTILITIES('items')
+            assert(opened == 'Oggetti')
+            SlashCmdList.DRAXTILITIES('')
+            assert(opened == 'Impostazioni')
+            EUI_MainBagFrame:Show()
+            ns.Refresh()
+            ns.active.bags.launcher.scripts.OnClick(ns.active.bags.launcher, 'RightButton')
+            assert(opened == 'Oggetti')
+
+            test.put(0, 1, 'Item-A', 100, 1, 1)
+            assert(ns.Toggle(0, 1))
+            local parent = CreateFrame('Frame')
+            parent:SetID(0)
+            local target = CreateFrame('Button', nil, parent)
+            target:SetID(1)
+            test.paint(target, { bag = 0, slot = 1, info = { itemID = 100 } })
+            local layer = ns.active.bags.layers[target]
+            test.spellTarget = true
+            layer.scripts.OnClick(layer, 'LeftButton')
+            assert(test.messages[#test.messages] == '|cff0cd29fDraxtilities:|r Questo oggetto è bloccato.')
+            assert(test.spellTarget and test.items['0:1'].guid == 'Item-A' and ns.db.locks['Item-A'])
+            test.spellTarget = false
+            test.cursor = test.location(0, 1)
+            ns.Refresh()
+            ns.active.cursor.world.scripts.OnClick(nil, 'LeftButton')
+            assert(test.confirm.title == 'Elimina un oggetto protetto')
+            assert(test.confirm.message:find(' (borsa 0, scomparto 1)', 1, true))
+            assert(test.confirm.confirmText == 'Continua' and test.confirm.cancelText == 'Annulla')
+            test.confirm.onCancel()
+            ClearCursor()
+            assert(ns.db.locks['Item-A'])
+
+            ns.db.locks['Absent-copy'] = { id = 300 }
+            test.buildPage('Oggetti', true)
+            test.buildPage('Oggetti')
+            assert(test.findControl('Cerca oggetti bloccati') and test.searchBox())
+            for _, row in ipairs(test.itemRows()) do
+                assert(row.action.text == 'Sblocca')
+                if row.entry.guid == 'Absent-copy' then
+                    assert(row.name.text == 'Oggetto #300' and row.detail.text:find('Non presente nelle tue borse', 1, true))
+                else
+                    assert(row.detail.text:find('Borsa 0, scomparto 1', 1, true))
+                end
+            end
+            ns.BeginBagBinding()
+            local dialog = DraxtilitiesBindingCapture
+            assert(dialog.apply.text == 'Salva tasto' and dialog.clear.text == 'Rimuovi tasto')
+            assert(dialog.hint.text:find('Premi una combinazione di tasti', 1, true))
+            test.bindings['K'] = 'TOGGLEQUESTLOG'
+            dialog.scripts.OnKeyDown(dialog, 'K')
+            assert(dialog.hint.text:find('Attualmente assegnato a: TOGGLEQUESTLOG', 1, true))
+            ns.CancelBagBinding()
+        """)
+
+    def test_untranslated_client_locale_uses_english_and_unknown_keys_fall_back(self):
+        self.initialize_runtime("frFR")
+        self.load("Options.lua")
+        self.run_lua("""
+            ns.RegisterOptions()
+            assert(test.plugin.modules[1].title == 'Item Protection')
+            assert(test.plugin.modules[1].pages[1] == 'Settings')
+            assert(ns.L['This item is locked.'] == 'This item is locked.')
+            assert(ns.L['Future untranslated text'] == 'Future untranslated text')
+            test.buildPage('Settings')
+            assert(test.findControl('Enable Item Protection'))
+        """)
 
     def test_defaults_and_existing_data(self):
         self.run_lua("""
@@ -127,6 +237,60 @@ class RuntimeTests(unittest.TestCase):
             ns.db.locks['Item-A'] = { id = 100 }
             ns.ReconcileRemovals()
             assert(ns.db.locks['Item-A'])
+        """)
+
+    def test_native_guard_follows_visibility_without_inventory_events(self):
+        self.run_lua("""
+            ns.active.bags = {}
+            test.put(0, 1, 'Item-A')
+            ns.db.locks['Item-A'] = { id = 100 }
+            local target = CreateFrame('Button')
+            local guard = ns.CreatePanelGuard({ title = 'Test', Target = function() return target end,
+                Collect = function() return { ns.Capture(0, 1) }, 'same' end })
+            guard.running = true
+            guard.Refresh()
+            test.click(guard.button)
+            test.confirm.onConfirm()
+            target:Hide()
+            test.update(0.3)
+            assert(not guard.button:IsShown(), 'hidden native button left an invisible click blocker')
+            target:Show()
+            test.update(0.3)
+            assert(guard.button:IsShown(), 'native button reappeared without its safeguard')
+            test.click(guard.button)
+            assert(not target.clicks and ns.pending, 'permission survived hiding the native button')
+            ns.CancelRequest()
+            guard.running = false
+            guard.Stop()
+            test.update(0.3)
+            assert(not guard.button:IsShown(), 'stopped native guard was restored by its watcher')
+        """)
+
+    def test_native_guard_cancels_only_its_pending_confirmation_when_closed(self):
+        self.run_lua("""
+            ns.active.bags = {}
+            test.put(0, 1, 'Item-A')
+            ns.db.locks['Item-A'] = { id = 100 }
+            local target = CreateFrame('Button')
+            local guard = ns.CreatePanelGuard({ title = 'Test', Target = function() return target end,
+                Collect = function() return { ns.Capture(0, 1) }, 'same' end })
+            guard.running = true
+            guard.Refresh()
+            test.click(guard.button)
+            local old = test.confirm
+            target:Hide()
+            guard.Refresh()
+            assert(not ns.pending, 'closed native panel left its confirmation open')
+            target:Show()
+            guard.Refresh()
+            old.onConfirm()
+            test.click(guard.button)
+            assert(not target.clicks and ns.pending, 'old confirmation authorized a reopened panel')
+            ns.Request('Other action', { ns.Capture(0, 1) }, nil, function() end)
+            local other = ns.pending
+            target:Hide()
+            guard.Refresh()
+            assert(ns.pending == other, 'closing a native panel cancelled another action')
         """)
 
     def test_observed_destruction_removes_only_consumed_copy(self):
@@ -264,16 +428,36 @@ class RuntimeTests(unittest.TestCase):
         """)
 
     def test_complete_addon_loads_with_all_modules_off(self):
-        for name in ("Bags", "Cursor", "Merchant", "Auctions", "Scrapping"):
-            self.load(f"Modules/{name}.lua")
-        self.load("Options.lua")
-        self.run_lua("""
-            test.event('ADDON_LOADED', 'Draxtilities')
-            assert(test.plugin.label == 'Draxtilities')
-            assert(#ns.order == 5 and next(ns.active) == nil)
-            assert(#test.plugin.modules[1].pages == 2)
-            assert(test.plugin.modules[1].pages[1] == 'Settings' and not ns.db.itemProtectionEnabled)
-        """)
+        files = [line for line in (ROOT / "Draxtilities.toc").read_text(encoding="utf-8").splitlines()
+                 if line.endswith(".lua")]
+        for locale in ("enUS", "itIT"):
+            with self.subTest(locale=locale):
+                self.lua = LuaRuntime()
+                self.lua.execute((ROOT / "tests/wow_mock.lua").read_text(encoding="utf-8"))
+                self.lua.globals().test.locale = locale
+                self.ns = self.lua.table()
+                self.lua.globals().ns = self.ns
+                for name in files:
+                    self.load(name)
+                self.run_lua("""
+                    assert(not ns.db, 'the addon initialized before ADDON_LOADED')
+                    test.event('ADDON_LOADED', 'Draxtilities')
+                    assert(test.plugin.label == 'Draxtilities')
+                    assert(#ns.order == 5 and next(ns.active) == nil)
+                    assert(#test.plugin.modules[1].pages == 2)
+                    assert(test.plugin.modules[1].pages[1] == ns.L['Settings'] and not ns.db.itemProtectionEnabled)
+                    for _, key in ipairs(ns.order) do assert(ns.db.modules[key] == true) end
+                """)
+
+    def test_client_gate_prevents_all_runtime_initialization(self):
+        self.lua = LuaRuntime()
+        self.ns = self.lua.table()
+        self.lua.globals().EUI_CLIENT_BLOCKED = True
+        for entry in (ROOT / "Draxtilities.toc").read_text(encoding="utf-8").splitlines():
+            if entry.endswith(".lua"):
+                self.load(entry)
+        self.assertEqual(list(self.ns.keys()), [])
+        self.assertIsNone(self.lua.globals().Draxtilities)
 
     def test_item_protection_master_switch_preserves_actions_locks_and_shortcut(self):
         for name in ("Bags", "Cursor", "Merchant", "Auctions", "Scrapping"):
@@ -730,7 +914,7 @@ class RuntimeTests(unittest.TestCase):
             assert(bags.launcher.fits and bags.launcher:GetParent() == root)
         """)
 
-    def test_locked_bag_item_cancels_targeted_item_spells_without_acting(self):
+    def test_locked_bag_item_blocks_spell_clicks_without_protected_cancellation(self):
         self.load("Modules/Bags.lua")
         self.run_lua("""
             test.put(0, 1, 'Item-A')
@@ -744,16 +928,20 @@ class RuntimeTests(unittest.TestCase):
             local layer = ns.active.bags.layers[target]
             test.spellTarget = true
             layer.scripts.OnClick(layer, 'LeftButton')
-            assert(test.stoppedSpell == 1 and not test.spellTarget)
+            assert(test.spellTarget, 'the addon tried to cancel targeting instead of consuming the click')
             assert(test.items['0:1'].guid == 'Item-A' and ns.db.locks['Item-A'] and not test.cursor)
             assert(test.messages[#test.messages]:find('This item is locked', 1, true))
+            layer.scripts.OnClick(layer, 'LeftButton')
+            assert(test.spellTarget and test.items['0:1'].guid == 'Item-A' and ns.db.locks['Item-A'])
+            test.spellTarget = false
             test.spellTargetID = true
             layer.scripts.OnClick(layer, 'LeftButton')
-            assert(test.stoppedSpell == 2 and not test.spellTargetID)
+            assert(test.spellTargetID and test.items['0:1'].guid == 'Item-A' and not test.cursor)
+            assert(ns.db.locks['Item-A'] and not test.confirm and not ns.pending)
             test.put(0, 1, 'Item-B', 200)
             test.spellTarget = true
             layer.scripts.OnClick(layer, 'LeftButton')
-            assert(test.stoppedSpell == 2 and test.items['0:1'].guid == 'Item-B')
+            assert(test.spellTarget and test.items['0:1'].guid == 'Item-B')
             assert(ns.db.locks['Item-A'] and not ns.db.locks['Item-B'])
         """)
 

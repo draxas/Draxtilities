@@ -1,5 +1,6 @@
 if EUI_CLIENT_BLOCKED then return end
 local _, ns = ...
+local L = ns.L
 
 function ns.CreateTypedDelete()
     local D, definitions = {}, {}
@@ -39,7 +40,7 @@ function ns.CreateTypedDelete()
             if current ~= request then return end
             if request.phase ~= "accepted" or not Valid(request) then D.Cancel(); return end
             request.phase = "review"
-            if not ns.Request("Delete a protected item", { request.item }, function()
+            if not ns.Request(L["Delete a protected item"], { request.item }, function()
                 return Valid(request) and request.typed == true
             end, function()
                 current = nil
@@ -61,7 +62,7 @@ function ns.CreateTypedDelete()
         local quality = C_Item.GetItemQuality(item.location)
         if not quality then
             C_Item.RequestLoadItemDataByID(item.id)
-            ns.Print("Item data is loading. Try again.")
+            ns.Print(L["Item data is loading. Try again."])
             return true
         end
         if quality < Enum.ItemQuality.Rare or quality == Enum.ItemQuality.Heirloom then return false end
@@ -70,7 +71,7 @@ function ns.CreateTypedDelete()
         local quest = C_Container.GetContainerItemQuestInfo(item.bag, item.slot)
         local isQuest = quest and (quest.isQuestItem or quest.questID)
         local key, name = Definition(isQuest), C_Item.GetItemName(item.location)
-        if not key or not name then ns.Print("The native deletion dialog is unavailable."); return true end
+        if not key or not name then ns.Print(L["The native deletion dialog is unavailable."]); return true end
         local base = StaticPopupDialogs[isQuest and "DELETE_GOOD_QUEST_ITEM" or "DELETE_GOOD_ITEM"]
         current = { item = item, key = key, phase = "typing", nativeAccept = base.OnAccept }
         if not StaticPopup_Show(key, name, nil, current) then D.Cancel() end

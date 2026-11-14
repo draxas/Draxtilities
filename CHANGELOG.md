@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- Traduzione italiana di tutte le stringhe dell'interfaccia, dei tooltip, delle conferme e dei messaggi in chat, selezionata automaticamente sui client itIT. Inglese conservato sugli altri client; comandi e dati salvati invariati.
+- Rimossa la chiamata protetta a SpellStopTargeting che causava il popup Blizzard durante il tentativo di disincantare un oggetto lockato.
+- Il clic sulla copia protetta viene consumato senza eseguire la spell o togliere il lucchetto. Il puntamento rimane attivo e l'avviso indica soltanto che l'oggetto è bloccato.
+- Il test delle spell rifiuta ora le chiamate dirette a SpellStopTargeting dagli handler Lua dell'addon.
+- I controlli dei pulsanti nativi seguono i cambi di visibilità anche senza eventi delle borse. La chiusura del contesto annulla la relativa conferma e il permesso monouso, senza annullare conferme di altre azioni.
+
 ## 0.1.2
 
 - Interruttore generale per Item Protection nella pagina Settings, con conservazione dei lucchetti e delle preferenze precedenti.
